@@ -1,0 +1,10 @@
+xos:
+  - meta:
+      projectURL: https://github.com/golistic/pxmysql
+      description: |
+        All notable changes to this project will be documented in this file.
+        Note: Using YAML is experimental, but since it is human readable, should be OK.
+  - versions:
+      - version: v0.9.0
+        date: 2023-01-24
+        description: Initial development release (not production ready).

@@ -1,0 +1,16 @@
+// Copyright (c) 2022, Geert JM Vanderkelen
+
+package xmysql
+
+import (
+	"context"
+	"testing"
+
+	"github.com/geertjanvdk/xkit/xt"
+)
+
+func TestContextTimeLocation(t *testing.T) {
+	t.Run("no time location in context", func(t *testing.T) {
+		xt.Eq(t, defaultTimeLocation.String(), ContextTimeLocation(context.Background()).String())
+	})
+}

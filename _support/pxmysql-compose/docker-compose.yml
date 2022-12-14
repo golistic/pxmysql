@@ -1,0 +1,33 @@
+networks:
+  pxmysql.test.net:
+    driver: bridge
+
+volumes:
+  shared:
+
+services:
+  mysql:
+    container_name: pxmysql.test.db
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpwd
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - pxmysql.test.net
+    volumes:
+      - ./data:/var/lib/mysql
+      - ./conf.d:/etc/mysql/conf.d
+      - ./shared:/shared:ro
+    ports:
+      - 127.0.0.1:53306:3306
+      - 127.0.0.1:53360:33060
+
+  go:
+    container_name: pxmysql.test.go
+    image: golang:1.19-bullseye
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./shared:/shared
+      - ../../../pxmysql:/go/src/github.com/golistic/pxmysql:ro
+
