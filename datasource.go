@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"github.com/golistic/xconv"
+	"github.com/golistic/xstrings"
 )
 
-var reDSN = regexp.MustCompile(`(.*?):(.*?)@(\w+)\((.*?)\)(?:/(\w+))?(?:/?\?(.*))?`)
+var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?(\?)?(?:/?(.*))?`)
 
 type DataSource struct {
 	Driver   string
@@ -45,8 +46,8 @@ func ParseDNS(name string) (*DataSource, error) {
 		Schema:   m[0][5],
 	}
 
-	if len(m[0]) == 8 {
-		query, err := url.ParseQuery(m[0][7])
+	if xstrings.SliceHas(m[0], "?") {
+		query, err := url.ParseQuery(m[0][len(m[0])-1])
 		if err != nil {
 			return nil, fmt.Errorf(errMsg, fmt.Errorf("could not parse query part"))
 		}
