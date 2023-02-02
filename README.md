@@ -12,6 +12,49 @@ conventional well known text-based MySQL protocol.
 If you are looking for a driver using the MySQL port 3306, please use the
 excellent [github.com/go-sql-driver/mysql][3].
 
+Installation
+------------
+
+The `pxmysql` package supports Go 1.19 and greater.
+
+```go get -u github.com/golistic/pxmysql```
+
+Quick Start
+-----------
+
+The below code connects to the MySQL server and gets the current time.
+
+Note! This is MySQL Protocol X; it uses TCP port `33060` (not `3306`!).
+
+```go
+package main
+
+import (
+  "database/sql"
+  "fmt"
+  "log"
+
+  _ "github.com/golistic/pxmysql"
+)
+
+func main() {
+  db, err := sql.Open("mysqlpx", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
+  if err != nil {
+    log.Fatalln(err)
+  }
+
+  var n string
+  if err := db.QueryRow("SELECT NOW()").Scan(&n); err != nil {
+    log.Fatalln(err)
+  }
+
+  fmt.Printf("Server time: %s", n)
+}
+```
+
+The `useTLS` option is required when you use a user set to use the authentication
+method `caching_sha2_password`.
+
 Features
 --------
 
