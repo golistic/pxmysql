@@ -62,8 +62,13 @@ func (e *Error) Unwrap() error {
 // best practices.
 func (e *Error) Error() string {
 	msg := e.Message
+
 	if len(e.Parameters) > 0 {
-		msg = fmt.Sprintf(e.Message, e.Parameters...)
+		if e.Inner != nil {
+			msg = fmt.Errorf(e.Message, e.Parameters...).Error()
+		} else {
+			msg = fmt.Sprintf(e.Message, e.Parameters...)
+		}
 	}
 
 	if e.ExtraMessage != "" {
