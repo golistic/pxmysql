@@ -1,4 +1,4 @@
-xos:
+pxmysql:
   - meta:
       projectURL: https://github.com/golistic/pxmysql
       description: |
@@ -8,3 +8,11 @@ xos:
       - version: v0.9.0
         date: 2023-01-24
         description: Initial development release (not production ready).
+        patches:
+          - version: v0.9.1
+            date: 2023-02-03
+            fixed:
+              - Fixed parsing query string of DSN so `useTLS` works as expected.
+              - Fixed using connection address without TCP port.
+              - Fix wrapping errors.
+              - Finish testing Unix socket support.
