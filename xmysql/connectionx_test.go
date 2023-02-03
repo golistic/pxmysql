@@ -5,6 +5,7 @@ package xmysql
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"os"
 	"strconv"
@@ -70,8 +71,37 @@ func TestNewConnection(t *testing.T) {
 		}
 		cnx, err := NewConnection(expConfig)
 		xt.OK(t, err)
+		xt.Eq(t, "127.0.0.40:"+defaultXPluginPort, cnx.config.Address)
 
-		xt.Assert(t, !cnx.isReachable())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_, err = cnx.NewSession(ctx)
+		xt.KO(t, err)
+		xt.KO(t, errors.Unwrap(err))
+		xt.Eq(t, "i/o timeout", errors.Unwrap(err).Error())
+	})
+
+	t.Run("address getting defaults if needed", func(t *testing.T) {
+		var cases = []struct {
+			have string
+			exp  string
+		}{
+			{have: "127.0.0.1", exp: "127.0.0.1:" + defaultXPluginPort},
+			{have: ":" + defaultXPluginPort, exp: defaultXPluginHost + ":" + "33060"},
+			{have: ":12453", exp: defaultXPluginHost + ":" + "12453"},
+			{have: "0.0.0.0:" + defaultXPluginPort, exp: "0.0.0.0:" + defaultXPluginPort},
+			{have: "", exp: defaultXPluginHost + ":" + defaultXPluginPort},
+		}
+
+		for _, c := range cases {
+			t.Run(c.exp, func(t *testing.T) {
+				cnx, err := NewConnection(&ConnectConfig{
+					Address: c.have,
+				})
+				xt.OK(t, err)
+				xt.Eq(t, c.exp, cnx.config.Address)
+			})
+		}
 	})
 
 	t.Run("valid time zone", func(t *testing.T) {

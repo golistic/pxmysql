@@ -4,6 +4,7 @@ package xmysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -63,15 +64,15 @@ func NewConnection(config *ConnectConfig) (*Connection, error) {
 		cnx.config.UnixSockAddr = f
 	} else {
 		h, p, err := net.SplitHostPort(cnx.config.Address)
-		if (err != nil && err.Error() == "missing port in address") || h == "" || p == "" {
-			if p == "" {
-				p = defaultXPluginPort
-			}
-			if h == "" {
-				h = defaultXPluginHost
-			}
-			cnx.config.Address = net.JoinHostPort(h, p)
+		var addrErr *net.AddrError
+		if errors.As(err, &addrErr) {
+			h = cnx.config.Address // on error h is empty
+			p = defaultXPluginPort
 		}
+		if h == "" {
+			h = defaultXPluginHost
+		}
+		cnx.config.Address = net.JoinHostPort(h, p)
 	}
 
 	if cnx.config.AuthMethod == "" {
