@@ -341,6 +341,7 @@ func TestSession_SetTimeZone(t *testing.T) {
 
 		// without time location set, timestamps returned by MySQL are UTC
 		nowUSALA := time.Now().In(locUSALA)
+		time.Sleep(1 * time.Second)
 		res, err := ses.ExecuteStatement(context.Background(), "SELECT NOW(6)")
 		xt.OK(t, err)
 

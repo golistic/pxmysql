@@ -1,2 +1,4 @@
 ?dev_*
 *.proto
+cmd/scratch
+_testdata/*.pem

@@ -306,8 +306,8 @@ func (ses *Session) open(ctx context.Context) error {
 	ses.conn, err = new(net.Dialer).DialContext(ctx, network, address)
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
-		opErr.Err = fmt.Errorf(strings.Replace(opErr.Err.Error(), "connect: ", "", -1))
-		return mysqlerrors.New(errCode, opErr.Addr, opErr)
+		return mysqlerrors.New(errCode, opErr.Addr,
+			fmt.Errorf(strings.Replace(opErr.Err.Error(), "connect: ", "", -1)))
 	}
 
 	defer func() {
