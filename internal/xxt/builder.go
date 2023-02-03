@@ -28,12 +28,11 @@ func NewGoBuilder(tctx *TestContext, container *Container) (*GoBuilder, error) {
 }
 
 // App takes the application name which is located in the container's
-// shared volume located at "/shared". The name is does not include the 'app_'
-// prefix.
+// shared volume located at "/shared".
 func (gb GoBuilder) App(name string) ([]byte, error) {
 	args := []string{
 		"exec", "-i", gb.Container.Name,
-		"sh", "/shared/build", name,
+		"sh", "/shared/build.sh", name,
 	}
 
 	return gb.Container.run(args...)
