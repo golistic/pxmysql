@@ -8,7 +8,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"testing"
 
@@ -120,8 +119,8 @@ func TestConnection_Ping(t *testing.T) {
 		_, err := drv.Open("username:pwd@unix(_testdata/mysqlx.sock)/myschema")
 		xt.KO(t, err)
 		xt.Eq(t, mysqlerrors.ClientBadUnixSocket, err.(*mysqlerrors.Error).Code)
-		var opErr *net.OpError
-		xt.Assert(t, errors.As(err, &opErr))
+		xt.KO(t, errors.Unwrap(err))
+		xt.Eq(t, "no such file or directory", errors.Unwrap(err).Error())
 	})
 
 }
