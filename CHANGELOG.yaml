@@ -9,6 +9,13 @@ pxmysql:
         date: 2023-01-24
         description: Initial development release (not production ready).
         patches:
+          - version: v0.9.2
+            date: 2023-02-14
+            changed:
+              - Fixed naming of `pxmysql.ParseDSN` (before it was `ParseDNS`).
+            fixed:
+              - Fixed including query part when getting string representation of DataSource.
+              - Fixed slash detection when not using schema name together with query part.
           - version: v0.9.1
             date: 2023-02-03
             fixed:
