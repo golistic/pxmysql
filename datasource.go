@@ -12,7 +12,7 @@ import (
 	"github.com/golistic/xstrings"
 )
 
-var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?(\?)?(?:/?(.*))?`)
+var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?/?(\?)?(.*)?`)
 
 type DataSource struct {
 	Driver   string
@@ -24,8 +24,8 @@ type DataSource struct {
 	UseTLS   bool
 }
 
-// ParseDNS parsers the name as a data source name (DSN).
-func ParseDNS(name string) (*DataSource, error) {
+// ParseDSN parsers the name as a data source name (DSN).
+func ParseDSN(name string) (*DataSource, error) {
 	errMsg := "invalid data source name (%w)"
 
 	m := reDSN.FindAllStringSubmatch(name, -1)
@@ -68,5 +68,15 @@ func (d *DataSource) String() string {
 	} else {
 		n += "/"
 	}
+
+	var queryParts []string
+	if d.UseTLS {
+		queryParts = append(queryParts, "useTLS=true")
+	}
+
+	if len(queryParts) > 0 {
+		n += "?" + strings.Join(queryParts, "&")
+	}
+
 	return n
 }
