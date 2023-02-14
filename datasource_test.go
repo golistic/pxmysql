@@ -51,35 +51,51 @@ func TestParseDSN(t *testing.T) {
 	})
 
 	t.Run("no default schema with query string", func(t *testing.T) {
-		dsn := "scott:tiger@tcp(127.0.0.1:33060)?useTLS=true"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "tiger",
-			Protocol: "tcp",
-			Address:  "127.0.0.1:33060",
-			Schema:   "",
-			UseTLS:   true,
+		var cases = map[string]string{
+			"without slash": "scott:tiger@tcp(127.0.0.1:33060)/?useTLS=true",
+			"with slash":    "scott:tiger@tcp(127.0.0.1:33060)?useTLS=true",
 		}
 
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
+		for name, dsn := range cases {
+			t.Run(name, func(t *testing.T) {
+				exp := &DataSource{
+					User:     "scott",
+					Password: "tiger",
+					Protocol: "tcp",
+					Address:  "127.0.0.1:33060",
+					Schema:   "",
+					UseTLS:   true,
+				}
+
+				have, err := ParseDSN(dsn)
+				xt.OK(t, err)
+				xt.Eq(t, exp, have)
+			})
+		}
 	})
 
 	t.Run("no default schema without query string", func(t *testing.T) {
-		dsn := "scott:tiger@tcp(127.0.0.1:33060)"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "tiger",
-			Protocol: "tcp",
-			Address:  "127.0.0.1:33060",
-			Schema:   "",
-			UseTLS:   false,
+		var cases = map[string]string{
+			"without slash": "scott:tiger@tcp(127.0.0.1:33060)/",
+			"with slash":    "scott:tiger@tcp(127.0.0.1:33060)",
 		}
 
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
+		for name, dsn := range cases {
+			t.Run(name, func(t *testing.T) {
+				exp := &DataSource{
+					User:     "scott",
+					Password: "tiger",
+					Protocol: "tcp",
+					Address:  "127.0.0.1:33060",
+					Schema:   "",
+					UseTLS:   false,
+				}
+
+				have, err := ParseDSN(dsn)
+				xt.OK(t, err)
+				xt.Eq(t, exp, have)
+			})
+		}
 	})
 
 	t.Run("no password", func(t *testing.T) {

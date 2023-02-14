@@ -12,7 +12,7 @@ import (
 	"github.com/golistic/xstrings"
 )
 
-var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?(\?)?(?:/?(.*))?`)
+var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?/?(\?)?(.*)?`)
 
 type DataSource struct {
 	Driver   string
@@ -46,7 +46,6 @@ func ParseDSN(name string) (*DataSource, error) {
 		Schema:   m[0][5],
 	}
 
-	fmt.Println("### sliceHas", xstrings.SliceHas(m[0], "?"), m)
 	if xstrings.SliceHas(m[0], "?") {
 		query, err := url.ParseQuery(m[0][len(m[0])-1])
 		if err != nil {
