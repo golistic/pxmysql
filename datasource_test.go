@@ -8,7 +8,7 @@ import (
 	"github.com/geertjanvdk/xkit/xt"
 )
 
-func TestParseDNS(t *testing.T) {
+func TestParseDSN(t *testing.T) {
 	t.Run("parse query string", func(t *testing.T) {
 		dsn := "scott:tiger@tcp(127.0.0.1:33060)/test?useTLS=true"
 		exp := &DataSource{
@@ -20,7 +20,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   true,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})
@@ -36,7 +36,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   false,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})
@@ -52,7 +52,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   true,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})
@@ -68,7 +68,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   false,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})
@@ -84,7 +84,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   false,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})
@@ -100,7 +100,7 @@ func TestParseDNS(t *testing.T) {
 			UseTLS:   false,
 		}
 
-		have, err := ParseDNS(dsn)
+		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
 	})

@@ -24,8 +24,8 @@ type DataSource struct {
 	UseTLS   bool
 }
 
-// ParseDNS parsers the name as a data source name (DSN).
-func ParseDNS(name string) (*DataSource, error) {
+// ParseDSN parsers the name as a data source name (DSN).
+func ParseDSN(name string) (*DataSource, error) {
 	errMsg := "invalid data source name (%w)"
 
 	m := reDSN.FindAllStringSubmatch(name, -1)

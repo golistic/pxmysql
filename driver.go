@@ -35,7 +35,7 @@ func (d *Driver) Open(name string) (driver.Conn, error) {
 // to the MySQL database using MySQL X Protocol.
 // This will be used instead of the Open-method (which actually uses this method).
 func (d *Driver) OpenConnector(name string) (driver.Connector, error) {
-	ds, err := ParseDNS(name)
+	ds, err := ParseDSN(name)
 	if err != nil {
 		return nil, err
 	}
