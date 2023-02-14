@@ -3,6 +3,7 @@
 package pxmysql
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/geertjanvdk/xkit/xt"
@@ -23,6 +24,10 @@ func TestParseDSN(t *testing.T) {
 		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
+
+		t.Run("using String-method, query part must be included", func(t *testing.T) {
+			xt.Assert(t, strings.Contains(have.String(), "?useTLS=true"))
+		})
 	})
 
 	t.Run("no query string provided", func(t *testing.T) {
@@ -39,6 +44,10 @@ func TestParseDSN(t *testing.T) {
 		have, err := ParseDSN(dsn)
 		xt.OK(t, err)
 		xt.Eq(t, exp, have)
+
+		t.Run("using String-method, with useTLS false, it is not included", func(t *testing.T) {
+			xt.Assert(t, !strings.Contains(have.String(), "?useTLS="))
+		})
 	})
 
 	t.Run("no default schema with query string", func(t *testing.T) {

@@ -46,6 +46,7 @@ func ParseDSN(name string) (*DataSource, error) {
 		Schema:   m[0][5],
 	}
 
+	fmt.Println("### sliceHas", xstrings.SliceHas(m[0], "?"), m)
 	if xstrings.SliceHas(m[0], "?") {
 		query, err := url.ParseQuery(m[0][len(m[0])-1])
 		if err != nil {
@@ -68,5 +69,15 @@ func (d *DataSource) String() string {
 	} else {
 		n += "/"
 	}
+
+	var queryParts []string
+	if d.UseTLS {
+		queryParts = append(queryParts, "useTLS=true")
+	}
+
+	if len(queryParts) > 0 {
+		n += "?" + strings.Join(queryParts, "&")
+	}
+
 	return n
 }
