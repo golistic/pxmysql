@@ -1,0 +1,25 @@
+{
+  "style": "flat-square",
+  "urlShieldsIO": "https://img.shields.io/static/v1",
+  "destFolder": "_badges",
+  "badges": [
+    {
+      "name": "go-report",
+      "label": "GO REPORT",
+      "messageFunc": "go.reportcard.grade",
+      "color": "green"
+    },
+    {
+      "name": "go-version",
+      "label": "GO",
+      "messageFunc": "go.mod.version",
+      "color": "#00ADD8"
+    },
+    {
+      "name": "license",
+      "label": "License",
+      "message": "MIT",
+      "color": "#97ca00"
+    }
+  ]
+}
