@@ -53,7 +53,6 @@ func getCredentials(credentials ...string) (string, string) {
 	password := testContext.MySQLRootPwd
 	if len(credentials) > 0 && credentials[0] != "" {
 		username = credentials[0]
-	} else {
 	}
 	if len(credentials) > 1 && credentials[1] != "" {
 		password = credentials[1]

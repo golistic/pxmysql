@@ -11,7 +11,7 @@ import (
 	"github.com/golistic/pxmysql/xmysql"
 )
 
-func ExampleConnection_NewSession_AUTO_NOTLS() {
+func ExampleConnection_NewSession_auto_notls() {
 	config := &xmysql.ConnectConfig{
 		Address:  "127.0.0.1:53360", // see _support/pxmysql-compose/docker-compose.yml
 		Username: "user_native",
@@ -30,7 +30,7 @@ func ExampleConnection_NewSession_AUTO_NOTLS() {
 	// Output: TLS: false
 }
 
-func ExampleConnection_NewSession_PLAIN_TLS() {
+func ExampleConnection_NewSession_plain_withtls() {
 	config := &xmysql.ConnectConfig{
 		Address:    "127.0.0.1:53360", // see _support/pxmysql-compose/docker-compose.yml
 		AuthMethod: xmysql.AuthMethodPlain,

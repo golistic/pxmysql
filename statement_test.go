@@ -22,6 +22,7 @@ import (
 func TestStatement_Close(t *testing.T) {
 	dsn := getTCPDSN("", "")
 	db, err := sql.Open("mysqlpx", dsn)
+	xt.OK(t, err)
 
 	stmt := "SELECT ?"
 	prep, err := db.Prepare(stmt)
@@ -40,6 +41,9 @@ func TestStatement_Close(t *testing.T) {
 func testOpenQueryRowsClose() ([]string, error) {
 	dsn := getTCPDSN("", "")
 	db, err := sql.Open("mysqlpx", dsn)
+	if err != nil {
+		return nil, err
+	}
 	defer func() { _ = db.Close() }()
 
 	stmt := `SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA = ? ORDER BY TABLE_SCHEMA`
@@ -73,6 +77,7 @@ func TestStatement_ExecContext(t *testing.T) {
 	t.Run("respect timeout", func(t *testing.T) {
 		dsn := getTCPDSN("", "")
 		db, err := sql.Open("mysqlpx", dsn)
+		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -105,6 +110,7 @@ func TestStatement_QueryContext(t *testing.T) {
 	t.Run("respect timeout", func(t *testing.T) {
 		dsn := getTCPDSN("", "")
 		db, err := sql.Open("mysqlpx", dsn)
+		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)

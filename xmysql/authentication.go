@@ -25,9 +25,9 @@ func (a AuthMethodTypes) Has(m AuthMethodType) bool {
 
 const (
 	AuthMethodPlain        AuthMethodType = "PLAIN"
-	AuthMethodAuto                        = "AUTO"
-	AuthMethodSHA256Memory                = "SHA256_MEMORY"
-	AuthMethodMySQL41                     = "MYSQL41"
+	AuthMethodAuto         AuthMethodType = "AUTO"
+	AuthMethodSHA256Memory AuthMethodType = "SHA256_MEMORY"
+	AuthMethodMySQL41      AuthMethodType = "MYSQL41"
 )
 
 var defaultAuthMethods = []AuthMethodType{AuthMethodMySQL41, AuthMethodSHA256Memory}

@@ -30,7 +30,7 @@ func (nd Decimal) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return nd.Valid == false
+		return !nd.Valid
 	}
 
 	switch v := value.(type) {

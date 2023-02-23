@@ -19,7 +19,6 @@ import (
 type appFlags struct {
 	addr     string
 	username string
-	password string
 }
 
 func main() {

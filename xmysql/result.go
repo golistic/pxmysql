@@ -56,9 +56,6 @@ type Result struct {
 	Columns         []*mysqlxresultset.ColumnMetaData
 	ProducedMessage string
 	stmtID          uint32
-
-	timeLocation  *time.Location
-	timeUTCOffset string
 }
 
 func (rs *Result) Warnings() []error {
