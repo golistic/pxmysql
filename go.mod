@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/geertjanvdk/xkit v0.9.0-beta.6
-	github.com/golistic/gomake v0.9.2
+	github.com/golistic/gomake v0.9.3
 	github.com/golistic/xconv v0.0.0-20220527181646-954959c73312
 	github.com/golistic/xstrings v1.0.0
 	github.com/golistic/xtime v0.0.0-20220526180554-4a3aeeb096f0
