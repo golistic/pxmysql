@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 
 	"github.com/golistic/pxmysql/mysqlerrors"
 )

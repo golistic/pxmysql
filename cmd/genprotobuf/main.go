@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xpath"
+	"github.com/golistic/xos"
 )
 
 const (
@@ -47,7 +47,7 @@ func checkExecLocation() (string, error) {
 	needles := []string{".git", protoPath}
 
 	for _, n := range needles {
-		if !xpath.IsDir(path.Join(d, n)) {
+		if !xos.IsDir(path.Join(d, n)) {
 			return "", fmt.Errorf("must execute within root of xmysql repository")
 		}
 	}

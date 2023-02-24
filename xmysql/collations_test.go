@@ -5,7 +5,7 @@ package xmysql
 import (
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 )
 
 func TestIsSupportedCollation(t *testing.T) {

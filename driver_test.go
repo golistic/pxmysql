@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/mysqlerrors"

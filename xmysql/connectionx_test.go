@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/geertjanvdk/xkit/xnet"
-	"github.com/geertjanvdk/xkit/xt"
-	"github.com/geertjanvdk/xkit/xutil"
+	"github.com/golistic/xstrings"
+	"github.com/golistic/xt"
 )
 
 const (
@@ -146,7 +146,7 @@ func TestConnection_NewSession(t *testing.T) {
 		xt.Assert(t, ses.serverCapabilities != nil)
 		xt.Assert(t, len(ses.serverCapabilities.AuthMechanisms) > 0)
 		// no TLS means no PLAIN
-		xt.Assert(t, !xutil.HasString(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
+		xt.Assert(t, !xstrings.SliceHas(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
 		xt.Assert(t, !ses.serverCapabilities.TLS)
 	})
 
@@ -206,7 +206,7 @@ func TestConnection_NewSession(t *testing.T) {
 
 		xt.Assert(t, ses.serverCapabilities != nil)
 		xt.Assert(t, len(ses.serverCapabilities.AuthMechanisms) > 0)
-		xt.Assert(t, xutil.HasString(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
+		xt.Assert(t, xstrings.SliceHas(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
 		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
 		xt.Assert(t, ses.serverCapabilities.TLS)
 	})
@@ -228,7 +228,7 @@ func TestConnection_NewSession(t *testing.T) {
 
 		xt.Assert(t, ses.serverCapabilities != nil)
 		xt.Assert(t, len(ses.serverCapabilities.AuthMechanisms) > 0)
-		xt.Assert(t, xutil.HasString(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
+		xt.Assert(t, xstrings.SliceHas(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
 		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
 		xt.Assert(t, ses.serverCapabilities.TLS)
 	})
@@ -254,7 +254,7 @@ func TestConnection_NewSession(t *testing.T) {
 
 		xt.Assert(t, ses.serverCapabilities != nil)
 		xt.Assert(t, len(ses.serverCapabilities.AuthMechanisms) > 0)
-		xt.Assert(t, xutil.HasString(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
+		xt.Assert(t, xstrings.SliceHas(ses.serverCapabilities.AuthMechanisms, string(AuthMethodPlain)))
 		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
 		xt.Assert(t, ses.serverCapabilities.TLS)
 	})
