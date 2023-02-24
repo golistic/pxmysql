@@ -28,7 +28,7 @@ func (nf Float64) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return nf.Valid == false
+		return !nf.Valid
 	}
 
 	switch v := value.(type) {

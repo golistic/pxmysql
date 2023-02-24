@@ -28,7 +28,7 @@ func (ns String) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return ns.Valid == false
+		return !ns.Valid
 	}
 
 	switch v := value.(type) {

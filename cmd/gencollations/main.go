@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/golistic/pxmysql/xmysql"
 )
@@ -19,14 +19,13 @@ import (
 type appFlags struct {
 	addr     string
 	username string
-	password string
 }
 
 func main() {
 	flags := initFlags()
 
 	fmt.Printf("Password for %s (entry for empty): ", flags.username)
-	p, err := terminal.ReadPassword(0)
+	p, err := term.ReadPassword(0)
 	if err != nil {
 		fmt.Printf("Error: failed reading password (%s)\n", err)
 		os.Exit(1)

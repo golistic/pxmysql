@@ -281,16 +281,6 @@ func (ses *Session) SessionID(ctx context.Context) (int, error) {
 	return int(res.Rows[0].Values[0].(uint64)), nil
 }
 
-// mustSessionID retrieves the MySQL server connection (session) ID, but unlike
-// the SessionID method, it panics when error occurs.
-func (ses *Session) mustSessionID() int {
-	id, err := ses.SessionID(context.Background())
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 func (ses *Session) open(ctx context.Context) error {
 	var err error
 

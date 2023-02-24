@@ -211,7 +211,7 @@ func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
 
 		// ignoring ok; cannot find way to fail
 		d.integral, _ = (&big.Int{}).SetString(s[:cut], 10)
-		d.fraction, ok = (&big.Int{}).SetString(s[cut:], 10)
+		d.fraction, _ = (&big.Int{}).SetString(s[cut:], 10)
 	} else {
 		d.integral, ok = (&big.Int{}).SetString(s, 10)
 		if !ok {

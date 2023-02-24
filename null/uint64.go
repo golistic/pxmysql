@@ -30,7 +30,7 @@ func (ni Uint64) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return ni.Valid == false
+		return !ni.Valid
 	}
 
 	switch v := value.(type) {

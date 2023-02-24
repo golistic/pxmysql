@@ -2,3 +2,5 @@
 *.proto
 cmd/scratch
 _testdata/*.pem
+
+.DS_Store

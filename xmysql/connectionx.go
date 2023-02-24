@@ -50,7 +50,8 @@ func NewConnection(config *ConnectConfig) (*Connection, error) {
 	if cnx.config.UnixSockAddr != "" {
 		f, err := filepath.Abs(cnx.config.UnixSockAddr)
 		if err == nil {
-			stat, err := os.Stat(f)
+			var stat os.FileInfo
+			stat, err = os.Stat(f)
 			if err == nil {
 				if stat.Mode().Type() != fs.ModeSocket {
 					err = fmt.Errorf("not Unix domain socket")

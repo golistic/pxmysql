@@ -30,7 +30,7 @@ func (ns Strings) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return ns.Valid == false
+		return !ns.Valid
 	}
 
 	equal := func(a, b []string) bool {

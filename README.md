@@ -3,6 +3,12 @@ pxmysql - Driver using the MySQL X Protocol
 
 Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
+<div>
+  <img alt="Go: 1.19" src="_badges/go-version.svg">
+  <a href="https://goreportcard.com/report/github.com/golistic/pxmysql"><img alt="Go Report: A+" src="_badges/go-report.svg"></a>
+  <img alt="license: MIT" src="_badges/license.svg">
+</div>
+
 The Go pxmysql package implements the MySQL X Protocol and provides a Go sql
 driver which uses it. The X Protocol communicates with MySQL using a different
 TCP port and transfers data using Protocol Buffers.
@@ -30,25 +36,25 @@ Note! This is MySQL Protocol X; it uses TCP port `33060` (not `3306`!).
 package main
 
 import (
-  "database/sql"
-  "fmt"
-  "log"
+	"database/sql"
+	"fmt"
+	"log"
 
-  _ "github.com/golistic/pxmysql"
+	_ "github.com/golistic/pxmysql"
 )
 
 func main() {
-  db, err := sql.Open("mysqlpx", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
-  if err != nil {
-    log.Fatalln(err)
-  }
+	db, err := sql.Open("mysqlpx", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-  var n string
-  if err := db.QueryRow("SELECT NOW()").Scan(&n); err != nil {
-    log.Fatalln(err)
-  }
+	var n string
+	if err := db.QueryRow("SELECT NOW()").Scan(&n); err != nil {
+		log.Fatalln(err)
+	}
 
-  fmt.Printf("Server time: %s", n)
+	fmt.Printf("Server time: %s", n)
 }
 ```
 
@@ -91,7 +97,6 @@ heading (bit like a roadmap).
     - [ ] CRUD operations: types `INSERT`, `FIND`, and `DELETE`
 * [ ] Public APIs and documentation
 * [x] Add Go `sql` driver
-
 
 Requirements
 ------------
@@ -355,7 +360,7 @@ goodness of MySQL and friends.
 License
 -------
 
-Distributed under the MIT license. See `LICENSE.txt` for more information.
+Distributed under the MIT license. See `LICENSE.md` for more information.
 
 [1]: https://grpc.io/docs/languages/go/quickstart/
 

@@ -289,6 +289,7 @@ func TestConnection_NewSession(t *testing.T) {
 		xt.OK(t, err)
 
 		ses, err := cnx.NewSession(context.Background())
+		xt.OK(t, err)
 		xt.Eq(t, AuthMethodMySQL41, ses.usedAuthMethod)
 	})
 
@@ -305,6 +306,7 @@ func TestConnection_NewSession(t *testing.T) {
 		xt.OK(t, err)
 
 		ses, err := cnx.NewSession(context.Background())
+		xt.OK(t, err)
 		xt.Eq(t, AuthMethodMySQL41, ses.usedAuthMethod)
 		_, ok := ses.conn.(*tls.Conn)
 		xt.Assert(t, ok, "expected tls.Conn")
@@ -324,6 +326,7 @@ func TestConnection_NewSession(t *testing.T) {
 		xt.OK(t, err)
 
 		ses, err := cnx.NewSession(context.Background())
+		xt.OK(t, err)
 		xt.Eq(t, AuthMethodPlain, ses.usedAuthMethod)
 		_, ok := ses.conn.(*tls.Conn)
 		xt.Assert(t, ok, "expected tls.Conn")

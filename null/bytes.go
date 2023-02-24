@@ -29,14 +29,14 @@ func (n Bytes) Compare(value any) bool {
 	}
 
 	if value == nil {
-		return n.Valid == false
+		return !n.Valid
 	}
 
 	switch v := value.(type) {
 	case []byte:
-		return bytes.Compare(n.Bytes, v) == 0
+		return bytes.Equal(n.Bytes, v)
 	case *[]byte:
-		return bytes.Compare(n.Bytes, *v) == 0
+		return bytes.Equal(n.Bytes, *v)
 	default:
 		panic(fmt.Sprintf("value must be []byte or *[]byte; not %T", value))
 	}

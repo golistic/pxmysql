@@ -35,7 +35,7 @@ func trace(action string, msg any, a ...any) {
 
 	switch action {
 	case "w", "write":
-		indicator = fmt.Sprintf("\n> write:")
+		indicator = "\n> write:"
 	case "r", "read":
 		indicator = "< read"
 	case "un", "unhandled":
