@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 )
 
 func TestStrings_Compare(t *testing.T) {

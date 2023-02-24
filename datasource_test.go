@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 )
 
 func TestParseDSN(t *testing.T) {

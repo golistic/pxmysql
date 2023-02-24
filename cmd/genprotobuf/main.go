@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xpath"
+	"github.com/golistic/xos"
 )
 
 const (
-	mysqlVersion = "8.0.28"
+	mysqlVersion = "8.0.32"
 	baseURL      = "https://raw.githubusercontent.com/mysql/mysql-server/mysql-" + mysqlVersion + "/plugin/x/protocol/protobuf/"
 )
 
@@ -47,7 +47,7 @@ func checkExecLocation() (string, error) {
 	needles := []string{".git", protoPath}
 
 	for _, n := range needles {
-		if !xpath.IsDir(path.Join(d, n)) {
+		if !xos.IsDir(path.Join(d, n)) {
 			return "", fmt.Errorf("must execute within root of xmysql repository")
 		}
 	}

@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/geertjanvdk/xkit/xos"
+
+	"github.com/golistic/pxmysql/mysqlerrors"
 )
 
 const (
@@ -60,7 +62,7 @@ func NewConnection(config *ConnectConfig) (*Connection, error) {
 		}
 
 		if err != nil {
-			return nil, fmt.Errorf("invalid unix socket file '%s' (%w)", cnx.config.UnixSockAddr, err)
+			return nil, mysqlerrors.New(mysqlerrors.ClientBadUnixSocket, cnx.config.UnixSockAddr, errors.Unwrap(err))
 		}
 		cnx.config.UnixSockAddr = f
 	} else {

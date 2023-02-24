@@ -5,7 +5,7 @@ package null
 import (
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 )
 
 func TestUint64_Compare(t *testing.T) {

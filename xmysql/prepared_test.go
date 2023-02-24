@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xt"
 	"github.com/geertjanvdk/xkit/xutil"
 	"github.com/golistic/xstrings"
+	"github.com/golistic/xt"
 
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/mysqlerrors"

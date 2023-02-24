@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/geertjanvdk/xkit/xt"
+	"github.com/golistic/xt"
 )
 
 func TestContextTimeLocation(t *testing.T) {

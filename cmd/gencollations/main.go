@@ -24,7 +24,7 @@ type appFlags struct {
 func main() {
 	flags := initFlags()
 
-	fmt.Printf("Password for %s (entry for empty): ", flags.username)
+	fmt.Printf("Password for %s (enter for empty): ", flags.username)
 	p, err := term.ReadPassword(0)
 	if err != nil {
 		fmt.Printf("Error: failed reading password (%s)\n", err)
@@ -35,7 +35,8 @@ func main() {
 	cnx, err := xmysql.NewConnection(&xmysql.ConnectConfig{
 		Address:  flags.addr,
 		Username: flags.username,
-		Password: sql.NullString{String: string(p)},
+		Password: sql.NullString{String: string(p), Valid: true},
+		UseTLS:   true,
 	})
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
