@@ -5,6 +5,7 @@ github.com/golistic/xconv v0.0.0-20220527181646-954959c73312 h1:R0r2YpcUzYwsd1A0
 github.com/golistic/xconv v0.0.0-20220527181646-954959c73312/go.mod h1:5uMaG4WPvgpCxIeW4PTRwzNKLfb9kEQRMOnj7+4KIP0=
 github.com/golistic/xstrings v1.0.0 h1:blYH9nNTAc6f+tYQ8XVMQ6YtSwOKh5N1ldVnRI3CTMo=
 github.com/golistic/xstrings v1.0.0/go.mod h1:0OequtLc+tesHgj1mgTpe+/nka4sVnfUO5IYmpxLPCc=
+github.com/golistic/xt v1.0.1 h1:prcwpL757GEu+dj6x2v6vxHkulkFdyQ3S1PqO+6ohPM=
 github.com/golistic/xtime v0.0.0-20220526180554-4a3aeeb096f0 h1:zM+7ty7D1IKhXQeAQSLI7RpLdR2nm4BHvDaVZ8ND4JU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.8 h1:e6P7q2lk1O+qJJb4BtCQXlK8vWEO8V1ZeuEdJNOqZyg=
