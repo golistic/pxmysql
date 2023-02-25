@@ -4,10 +4,10 @@
   "destFolder": "_badges",
   "badges": [
     {
-      "name": "go-report",
-      "label": "GO REPORT",
-      "messageFunc": "go.reportcard.grade",
-      "color": "green"
+      "name": "mysql",
+      "label": "MySQL",
+      "message": "8.0",
+      "color": "#f29221"
     },
     {
       "name": "go-version",

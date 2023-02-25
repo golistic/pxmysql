@@ -5,8 +5,8 @@ Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 <div>
   <img alt="Go: 1.19" src="_badges/go-version.svg">
-  <a href="https://goreportcard.com/report/github.com/golistic/pxmysql"><img alt="Go Report: A+" src="_badges/go-report.svg"></a>
   <img alt="license: MIT" src="_badges/license.svg">
+  <img alt="MySQL: 8.0" src="_badges/mysql.svg">
 </div>
 
 The Go pxmysql package implements the MySQL X Protocol and provides a Go sql
