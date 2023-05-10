@@ -5,8 +5,6 @@ package xmysql
 import (
 	"fmt"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxnotice"
 )
 
@@ -48,7 +46,7 @@ func (n *notices) add(msg *serverMessage) error {
 		n.sessionVariableChanges = append(n.sessionVariableChanges, m)
 	case mysqlxnotice.Frame_SESSION_STATE_CHANGED:
 		m := &mysqlxnotice.SessionStateChanged{}
-		if err := proto.Unmarshal(frame.Payload, m); err != nil {
+		if err := UnmarshalPartial(frame.Payload, m); err != nil {
 			return fmt.Errorf("failed unmarshalling '%s' (%w)", m.String(), err)
 		}
 		trace("state", m)

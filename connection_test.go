@@ -104,3 +104,30 @@ func TestConnection_QueryContext(t *testing.T) {
 		xt.Assert(t, errors.Is(err, mysqlerrors.ErrContextDeadlineExceeded), err.Error())
 	})
 }
+
+func TestConnector_Connect(t *testing.T) {
+	t.Run("server closing stale connection and reconnect", func(t *testing.T) {
+		dsn := getTCPDSN()
+		db, err := sql.Open("mysqlpx", dsn)
+		xt.OK(t, err)
+
+		_, err = db.Exec("SET @@SESSION.mysqlx_wait_timeout = 2")
+		xt.OK(t, err)
+
+		var cnxID int
+		xt.OK(t, db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxID))
+
+		var n string
+		var v string
+		xt.OK(t, db.QueryRow("SHOW SESSION VARIABLES LIKE 'mysqlx_wait_timeout'").Scan(&n, &v))
+
+		time.Sleep(3 * time.Second) // server should close connection
+
+		var cnxIDAfter int
+		db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxIDAfter)
+
+		xt.OK(t, db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxIDAfter))
+
+		xt.Assert(t, cnxID != cnxIDAfter)
+	})
+}

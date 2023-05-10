@@ -42,7 +42,7 @@ func init() {
 }
 
 func (m *serverMessage) Unmarshall(into proto.Message) error {
-	if err := proto.Unmarshal(m.payload, into); err != nil {
+	if err := UnmarshalPartial(m.payload, into); err != nil {
 		return fmt.Errorf("failed unmarshalling server message type %s (%w)",
 			mysqlx.ServerMessages_Type(m.msgType).String(), err)
 	}
@@ -55,9 +55,12 @@ func (m *serverMessage) ServerMessageType() mysqlx.ServerMessages_Type {
 
 func readMessage(r io.Reader) (*serverMessage, error) {
 	var header [5]byte
-	if _, err := io.ReadFull(r, header[:]); err != nil {
+	if n, err := io.ReadFull(r, header[:]); err != nil {
 		if errors.Is(err, os.ErrDeadlineExceeded) {
 			err = os.ErrDeadlineExceeded
+		}
+		if errors.Is(err, io.EOF) && n < 5 {
+			return nil, driver.ErrBadConn
 		}
 		return nil, fmt.Errorf("failed reading message header (%w)", err)
 	}
