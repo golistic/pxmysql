@@ -9,6 +9,19 @@ pxmysql:
         date: 2023-01-24
         description: Initial development release (not production ready).
         patches:
+          - version: v0.9.3
+            date: 2023-05-10
+            changed:
+              - Updated protocol buffer generated code and collations to MySQL 8.0.32.
+            added:
+              - Added golistic/gomake targets for linting, reporting, and badges.
+              - Added badges, generated/stored within repository, to README.md.
+            fixed:
+              - Fixed error returned when Unix socket is not available.
+              - Fixed cmd/gencollations to use TLS and set password as valid nullable.
+              - Fixed linting issues reported by linters run by golangci-lint.
+              - Replaced deprecated package golang.org/x/crypto/ssh/terminal.
+              - Fixed handling DATETIME zero values for time parts.
           - version: v0.9.2
             date: 2023-02-14
             changed:
