@@ -313,19 +313,27 @@ func (rs *Result) decodeValue(ctx context.Context, value []byte, column *mysqlxr
 			parts[1] = int(value[2])
 			parts[2] = int(value[3])
 
-			// decode time if available
+			// decode hour if available
 			if len(value) > 4 {
 				parts[3] = int(value[4])
-				parts[4] = int(value[5])
-				parts[5] = int(value[6])
+			}
 
-				// decode microseconds as nanoseconds if available
-				if len(value) > 7 {
-					parts[6] = func() int {
-						v, _ := binary.Uvarint(value[7:])
-						return int(v) * 1000
-					}()
-				}
+			// decode minutes if available
+			if len(value) > 5 {
+				parts[4] = int(value[5])
+			}
+
+			// decode seconds if available
+			if len(value) > 6 {
+				parts[5] = int(value[6])
+			}
+
+			// decode microseconds as nanoseconds if available
+			if len(value) > 7 {
+				parts[6] = func() int {
+					v, _ := binary.Uvarint(value[7:])
+					return int(v) * 1000
+				}()
 			}
 
 			v = time.Date(
