@@ -9,6 +9,10 @@ pxmysql:
         date: 2023-01-24
         description: Initial development release (not production ready).
         patches:
+          - version: v0.9.4
+            date: 2023-05-10
+            fixed:
+              - Recover from server timing out connections.
           - version: v0.9.3
             date: 2023-05-10
             changed:
