@@ -256,7 +256,7 @@ The `ConnectConfig`-type has the following attributes:
 The following authentication methods are supported:
 
 * `PLAIN` or `pxmysql.AuthMethodPlain`: can only be used when TLS is available
-* `MYSQL41` or `pxmysql.AuthMethodMySQL41: the older, but more compatible
+* `MYSQL41` or `pxmysql.AuthMethodMySQL41`: the older, but more compatible
   mechanism (uses SHA1)
 * `SHA256_MEMORY` or `pxmysql.AuthMethodSHA256Memory`: the newer mechanism which
   uses SHA256 and is cached; caveat: user must first authenticate using `PLAIN`
@@ -284,7 +284,7 @@ Development
 
 ### Compile Go code from MySQL X Plugin Protocol Buffer definitions
 
-The package `pxmysql` needs Go code compiled from the MySQL X Plugin Protocol
+The package `pxmysql` needs Go-code compiled from the MySQL X Plugin Protocol
 Buffer definitions. This requires the [protoc][1] compiler to be installed
 first. After, all that needs to be done is run the following from within the
 root of the repository:
@@ -317,7 +317,7 @@ See `go run ./cmd/gencollations -help` for more information.
 Tests use a MySQL server running within a Docker container. It can be started
 using the Docker Compose configuration found under `_support/mysqld`:
 
-    cd _support/mysqld
+    cd _support/pxmysql-compose
     docker compose up -d
 
 The above uses the Docker `compose` plugin. Alternatively, use `docker-compose`.

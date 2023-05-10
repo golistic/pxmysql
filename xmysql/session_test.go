@@ -280,6 +280,19 @@ func TestSession_ExecuteStatement(t *testing.T) {
 		xt.Eq(t, "?", res.Rows[0].Values[2].(string))
 		xt.Eq(t, 3, res.Rows[0].Values[3].(int64))
 	})
+
+	t.Run("zero hour timestamp", func(t *testing.T) {
+		ses, err := cnx.NewSession(context.Background())
+		xt.OK(t, err)
+
+		res, err := ses.ExecuteStatement(context.Background(),
+			fmt.Sprintf("SELECT TIMESTAMP('2023-01-01 01:00:00') as ts from dual"))
+		xt.OK(t, err)
+		xt.Eq(t, 1, len(res.Rows))
+
+		have := res.Rows[0].Values[0].(null.Time)
+		have.Time.Equal(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
+	})
 }
 
 func TestSession_CurrentSchema(t *testing.T) {
@@ -455,5 +468,4 @@ func TestSession_DeallocatePrepareStatement(t *testing.T) {
 		_, err = prep.Execute(context.Background(), 3)
 		xxt.AssertMySQLError(t, err, 5110)
 	})
-
 }
