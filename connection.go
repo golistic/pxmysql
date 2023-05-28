@@ -17,14 +17,15 @@ type connection struct {
 }
 
 var (
-	_ driver.Conn           = &connection{}
-	_ driver.ConnBeginTx    = &connection{}
-	_ driver.Pinger         = &connection{}
-	_ driver.ExecerContext  = &connection{}
-	_ driver.QueryerContext = &connection{}
+	_ driver.Conn           = (*connection)(nil)
+	_ driver.ConnBeginTx    = (*connection)(nil)
+	_ driver.Pinger         = (*connection)(nil)
+	_ driver.ExecerContext  = (*connection)(nil)
+	_ driver.QueryerContext = (*connection)(nil)
 )
 
 func (c *connection) Prepare(query string) (driver.Stmt, error) {
+
 	prep, err := c.session.PrepareStatement(context.Background(), query)
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (c *connection) BeginTx(ctx context.Context, opts driver.TxOptions) (driver
 
 func (c *connection) Ping(ctx context.Context) error {
 	if c.cnx == nil {
-		return driver.ErrBadConn
+		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
 	}
 
 	if c.session != nil {

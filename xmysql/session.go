@@ -5,6 +5,7 @@ package xmysql
 import (
 	"context"
 	"crypto/tls"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"io"
@@ -299,6 +300,8 @@ func (ses *Session) open(ctx context.Context) error {
 	if errors.As(err, &opErr) {
 		return mysqlerrors.New(errCode, opErr.Addr,
 			fmt.Errorf(strings.Replace(opErr.Err.Error(), "connect: ", "", -1)))
+	} else if err != nil {
+		return fmt.Errorf("%s (%w)", err.Error(), driver.ErrBadConn)
 	}
 
 	defer func() {
