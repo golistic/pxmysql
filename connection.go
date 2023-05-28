@@ -107,3 +107,13 @@ func (c *connection) QueryContext(ctx context.Context, query string, args []driv
 
 	return stmt.QueryContext(ctx, args)
 }
+
+func (c *connection) ResetSession(ctx context.Context) error {
+	if c.cnx == nil {
+		return driver.ErrBadConn
+	}
+
+	c.session.RequestResetConnection()
+
+	return nil
+}

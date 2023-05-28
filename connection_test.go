@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -129,5 +130,42 @@ func TestConnector_Connect(t *testing.T) {
 		xt.OK(t, db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxIDAfter))
 
 		xt.Assert(t, cnxID != cnxIDAfter)
+	})
+
+	t.Run("asdfasdfasdfasdf", func(t *testing.T) {
+		dsn := getTCPDSN()
+		db, err := sql.Open("mysqlpx", dsn)
+		xt.OK(t, err)
+
+		conn1, err := db.Conn(context.Background())
+		xt.OK(t, err)
+
+		conn2, err := db.Conn(context.Background())
+		xt.OK(t, err)
+
+		var conn2ID int
+		xt.OK(t, conn2.QueryRowContext(context.Background(), "SELECT CONNECTION_ID()").Scan(&conn2ID))
+
+		var conn2Err error
+
+		wg := sync.WaitGroup{}
+
+		go func() {
+			wg.Add(1)
+			var sleep int
+			var cnxID int
+			fmt.Println("### done", conn2Err)
+			conn2Err = conn2.QueryRowContext(context.Background(), "SELECT SLEEP(5), CONNECTION_ID()").Scan(&sleep, &cnxID)
+			fmt.Println("### done", conn2Err, sleep, cnxID, conn2ID)
+			wg.Done()
+		}()
+
+		time.Sleep(2 * time.Second)
+		_, err = conn1.ExecContext(context.Background(), "KILL ?", conn2ID)
+		xt.OK(t, err)
+
+		wg.Wait()
+
+		xt.OK(t, conn2Err)
 	})
 }

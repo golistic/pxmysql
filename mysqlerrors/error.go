@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrContextDeadlineExceeded = errors.New("context deadline exceeded")
+	ErrReadUnexpected          = errors.New("unexpected bytes read from socket")
 )
 
 // Error holds information of MySQL returned error and is implementing

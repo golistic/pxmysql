@@ -122,14 +122,33 @@ func write(ctx context.Context, session *Session, msg proto.Message) error {
 		return driver.ErrBadConn
 	}
 
+	deadline, haveDeadline := ctx.Deadline()
+
+	if session.wantReset {
+		session.wantReset = false
+
+		if haveDeadline {
+			if err := session.conn.SetReadDeadline(deadline); err != nil {
+				return fmt.Errorf("failed setting read deadline (%w)", err)
+			}
+		}
+
+		if err := session.checkConnection(); err != nil {
+			// not calling session.Close() as it will fail since connection is bad
+			_ = session.conn.Close()
+			return driver.ErrBadConn
+		}
+	}
+
 	msgType, err := clientMessageType(msg)
 	if err != nil {
 		return err
 	}
 
-	deadline, _ := ctx.Deadline()
-	if err := session.conn.SetWriteDeadline(deadline); err != nil {
-		return fmt.Errorf("failed setting write deadline (%w)", err)
+	if haveDeadline {
+		if err := session.conn.SetWriteDeadline(deadline); err != nil {
+			return fmt.Errorf("failed setting write deadline (%w)", err)
+		}
 	}
 
 	b, err := proto.Marshal(msg)

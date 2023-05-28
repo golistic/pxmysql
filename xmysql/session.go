@@ -11,6 +11,7 @@ import (
 	"net"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -39,6 +40,7 @@ type Session struct {
 	timeLocation       *time.Location
 
 	preparedStmtCount uint32
+	wantReset         bool
 }
 
 func newSession(ctx context.Context, cnx *Connection) (*Session, error) {
@@ -621,4 +623,55 @@ func (ses *Session) handleResult(ctx context.Context, doneWhen doneWhenFunc) (*R
 	}
 
 	return result, nil
+}
+
+// checkConnection checks whether this session's connection is still valid.
+// Based on https://github.com/go-sql-driver/mysql/blob/master/conncheck.go.
+// See also https://github.blog/2020-05-20-three-bugs-in-the-go-mysql-driver/.
+func (ses *Session) checkConnection() error {
+	var sysErr error
+
+	conn := ses.conn
+
+	if tlsConn, ok := conn.(*tls.Conn); ok {
+		conn = tlsConn.NetConn()
+	}
+
+	sysConn, ok := conn.(syscall.Conn)
+	if !ok {
+		return nil
+	}
+
+	rawConn, err := sysConn.SyscallConn()
+	if err != nil {
+		return err
+	}
+
+	err = rawConn.Read(func(fd uintptr) bool {
+		var buf [1]byte
+		n, err := syscall.Read(int(fd), buf[:])
+		switch {
+		case n == 0 && err == nil:
+			fmt.Println("### here")
+			sysErr = io.EOF
+		case n > 0:
+			sysErr = mysqlerrors.ErrReadUnexpected
+		case err == syscall.EAGAIN || err == syscall.EWOULDBLOCK:
+			sysErr = nil
+		default:
+			sysErr = err
+		}
+		return true
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return sysErr
+}
+
+// RequestResetConnection flags this session to check the connection.
+func (ses *Session) RequestResetConnection() {
+	ses.wantReset = true
 }
