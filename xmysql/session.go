@@ -37,6 +37,7 @@ type Session struct {
 	serverCapabilities *ServerCapabilities
 	usedAuthMethod     AuthMethodType
 	timeLocation       *time.Location
+	maxAllowedPacket   int
 
 	preparedStmtCount uint32
 }
@@ -534,8 +535,13 @@ func (ses *Session) getServerCapabilities(ctx context.Context) error {
 }
 
 func (ses *Session) metaInformation(ctx context.Context) error {
-	// CurrentSchema retrieves the current schema (database) of this session.
-	res, err := ses.ExecuteStatement(ctx, "SELECT VERSION(), CONNECTION_ID()")
+
+	// note: CurrentSchema retrieves the current schema (database) of this session.
+
+	// we try to get everything in one query
+	res, err := ses.ExecuteStatement(ctx, `SELECT VERSION(), CONNECTION_ID(),
+CAST((SELECT VARIABLE_VALUE FROM performance_schema.global_variables WHERE VARIABLE_NAME = 'mysqlx_max_allowed_packet') AS SIGNED)
+`)
 	if err != nil {
 		return err
 	}
@@ -546,6 +552,13 @@ func (ses *Session) metaInformation(ctx context.Context) error {
 
 	ses.mysqlVersion = res.Rows[0].Values[0].(string)
 	ses.id = int(res.Rows[0].Values[1].(uint64))
+
+	// X Plugin is not returning an error when message is too big. We need to figure this
+	// out on the client side, but need to know the limit when opening the session.
+	maxAllowedPacket := res.Rows[0].Values[2].(null.Int64)
+	if maxAllowedPacket.Valid {
+		ses.maxAllowedPacket = int(maxAllowedPacket.Int64)
+	}
 
 	return nil
 }

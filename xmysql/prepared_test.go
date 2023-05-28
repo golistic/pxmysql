@@ -260,10 +260,7 @@ func TestPrepared_Execute(t *testing.T) {
 		xt.Eq(t, mysqlerrors.ClientNetPacketTooLarge, errMySQL.Code)
 
 		_, err = prepSelect.Execute(context.Background(), "ok length")
-		// connection was re-opened
-		xt.KO(t, err)
-		xt.Assert(t, errors.As(err, &errMySQL))
-		xt.Eq(t, 5110, errMySQL.Code)
+		xt.OK(t, err)
 	})
 
 	t.Run("big but ok length message", func(t *testing.T) {

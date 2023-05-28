@@ -137,6 +137,10 @@ func write(ctx context.Context, session *Session, msg proto.Message) error {
 		return fmt.Errorf("failed marshalling protobuf message (%w)", err)
 	}
 
+	if session.maxAllowedPacket > 0 && len(b) > session.maxAllowedPacket {
+		return mysqlerrors.New(mysqlerrors.ClientNetPacketTooLarge)
+	}
+
 	var header [5]byte
 	binary.LittleEndian.PutUint32(header[:], uint32(len(b))+1) // +1 is final \x00
 
@@ -146,12 +150,7 @@ func write(ctx context.Context, session *Session, msg proto.Message) error {
 	_, err = buf.WriteTo(session.conn)
 	switch {
 	case errors.Is(err, syscall.EPIPE):
-		// recover by re-opening the session
-		_ = session.conn.Close()
-		if err := session.open(ctx); err != nil {
-			return err
-		}
-		return mysqlerrors.New(mysqlerrors.ClientNetPacketTooLarge)
+		return fmt.Errorf("broken pipe when writing (%w)", driver.ErrBadConn)
 	case err != nil:
 		return fmt.Errorf("failed sending message (%w)", err)
 	}

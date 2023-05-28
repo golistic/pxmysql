@@ -36,7 +36,7 @@ var mysqlClientErrors = map[int]Error{
 		SQLState: "HY000",
 	},
 	ClientNetPacketTooLarge: { // 2020
-		Message:  "got packet bigger than 'max_allowed_packet' bytes",
+		Message:  "got packet bigger than 'mysqlx_max_allowed_packet' bytes",
 		Code:     ClientNetPacketTooLarge,
 		SQLState: "HY000",
 	},

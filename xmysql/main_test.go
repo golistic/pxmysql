@@ -19,7 +19,7 @@ var (
 )
 
 var (
-	testMySQLMaxAllowedPacket = -1 // MySQL's @@max_allowed_packet
+	testMySQLMaxAllowedPacket = -1 // MySQL's mysqlx_max_allowed_packet
 )
 
 func testTearDown() {
@@ -51,13 +51,13 @@ func TestMain(m *testing.M) {
 		return
 	}
 
-	if v, err := testContext.Server.Variable("global", "max_allowed_packet"); err != nil {
-		testErr = fmt.Errorf("failed getting variable max_allowed_packet (%s)", err)
+	if v, err := testContext.Server.Variable("global", "mysqlx_max_allowed_packet"); err != nil {
+		testErr = fmt.Errorf("failed getting variable mysqlx_max_allowed_packet (%s)", err)
 		return
 	} else {
 		n, err := strconv.ParseInt(v, 10, 32)
 		if err != nil {
-			testErr = fmt.Errorf("failed converting variable max_allowed_packet (%s)", err)
+			testErr = fmt.Errorf("failed converting variable mysqlx_max_allowed_packet (%s)", err)
 			return
 		}
 		testMySQLMaxAllowedPacket = int(n)
