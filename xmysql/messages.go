@@ -60,7 +60,7 @@ func readMessage(r io.Reader) (*serverMessage, error) {
 			err = os.ErrDeadlineExceeded
 		}
 		if errors.Is(err, io.EOF) && n < 5 {
-			return nil, driver.ErrBadConn
+			return nil, fmt.Errorf("broken pipe when reading (%w)", driver.ErrBadConn)
 		}
 		return nil, fmt.Errorf("failed reading message header (%w)", err)
 	}
@@ -119,7 +119,7 @@ func clientMessageType(msg proto.Message) (mysqlx.ClientMessages_Type, error) {
 
 func write(ctx context.Context, session *Session, msg proto.Message) error {
 	if session == nil || session.conn == nil {
-		return driver.ErrBadConn
+		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
 	}
 
 	msgType, err := clientMessageType(msg)

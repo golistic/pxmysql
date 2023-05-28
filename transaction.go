@@ -5,6 +5,7 @@ package pxmysql
 import (
 	"context"
 	"database/sql/driver"
+	"fmt"
 
 	"github.com/golistic/pxmysql/xmysql"
 )
@@ -17,7 +18,7 @@ var _ driver.Tx = &Transaction{}
 
 func (tx *Transaction) Commit() error {
 	if tx.session == nil {
-		return driver.ErrBadConn
+		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
 	}
 
 	if _, err := tx.session.ExecuteStatement(context.Background(), "COMMIT"); err != nil {
@@ -29,7 +30,7 @@ func (tx *Transaction) Commit() error {
 
 func (tx *Transaction) Rollback() error {
 	if tx.session == nil {
-		return driver.ErrBadConn
+		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
 	}
 
 	if _, err := tx.session.ExecuteStatement(context.Background(), "ROLLBACK"); err != nil {
