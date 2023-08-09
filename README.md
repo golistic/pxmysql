@@ -41,11 +41,13 @@ import (
 	"log"
 
 	_ "github.com/golistic/pxmysql"
+	
+	// or import the following to use the driver name "mysql"
+	// _ "github.com/golistic/pxmysql/mysql"
 )
 
 func main() {
-	// can use pxmysql or mysql as driver name
-	db, err := sql.Open("mysql", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
+	db, err := sql.Open("pxmysql", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -252,14 +254,22 @@ The `ConnectConfig`-type has the following attributes:
   data types to Go `time.Time` (see [MySQL Manual to support this][2])
   (default: UTC)
 
-### Environment Variables
+### Driver name
 
-The following lists environment variables that can be set to configure the `pxmysql`
-package.
+We use the driver name "pxmysql", which needs to be used with Go's `sql.Open`.
+However, some projects require the "mysql" name, but can use this driver instead.
+Therefor, you can register "mysql" to use the `pxmysql` driver like this:
 
-* `PXMYSQL_DONT_REGISTER_MYSQL`: use this to not register the name `mysql` as driver.
-  This can be handy when you want to use both the [conventional driver][3] and the driver
-  of this package.
+```go
+package yourstuff
+
+import (
+    _ "github.com/golistic/pxmysql/mysql"
+)
+```
+
+We do not default to "mysql" as driver name, so it is possible to use
+other drivers using MySQL at the same time.
 
 ### Authentication methods
 
