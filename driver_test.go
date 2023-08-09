@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/golistic/xstrings"
@@ -18,15 +17,6 @@ import (
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/mysqlerrors"
 )
-
-func testCmd(cmdArgs []string, envs []string) *exec.Cmd {
-	args := append([]string{"-test.v"}, cmdArgs...)
-
-	cmd := exec.Command(os.Args[0], args...)
-	cmd.Env = append(os.Environ(), envs...)
-
-	return cmd
-}
 
 func TestSQLDriver_Open(t *testing.T) {
 	pwd := "aPassword"
@@ -140,31 +130,7 @@ func TestDriver_Open(t *testing.T) {
 		xt.Assert(t, xstrings.SliceHas(sql.Drivers(), "pxmysql"), "expected driver pxmysql to be registered")
 	})
 
-	t.Run("mysql is registered", func(t *testing.T) {
-		xt.Assert(t, xstrings.SliceHas(sql.Drivers(), "mysql"), "expected driver mysql to be registered")
-	})
-
 	t.Run("mysql is not registered", func(t *testing.T) {
-		// executes test 'check for mysql name in drivers' in its own subprocess
-		args := []string{
-			"-test.run", `^\QTestDriver_Open\E$/^\Qcheck_for_mysql_name_in_drivers\E$`,
-		}
-
-		cmd := testCmd(args, []string{"PXMYSQL_DONT_REGISTER_MYSQL=1", "CHECK=1"})
-		xt.OK(t, cmd.Run(), "PXMYSQL_DONT_REGISTER_MYSQL might not be correctly interpreted")
-	})
-
-	t.Run("check for mysql name in drivers", func(t *testing.T) {
-		// this is executed in a subprocess
-		if _, ok := os.LookupEnv("CHECK"); !ok {
-			// no need to report this as skipped
-			return
-		}
-
-		s, ok := os.LookupEnv("PXMYSQL_DONT_REGISTER_MYSQL")
-		xt.Assert(t, ok, "expected PXMYSQL_DONT_REGISTER_MYSQL to be set")
-		xt.Eq(t, "1", s, "expected PXMYSQL_DONT_REGISTER_MYSQL to be set to '1'")
-		xt.Assert(t, !xstrings.SliceHas(sql.Drivers(), "mysql"),
-			"expected driver mysql to be NOT registered")
+		xt.Assert(t, !xstrings.SliceHas(sql.Drivers(), "mysql"), "expected driver mysql to be NOT registered")
 	})
 }
