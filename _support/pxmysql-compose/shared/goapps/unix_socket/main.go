@@ -22,7 +22,7 @@ import (
 
 func main() {
 	// credentials are the once used when running pxmysql tests
-	db, err := sql.Open("mysqlpx", "root:rootpwd@unix(/var/lib/mysql/mysqlx.sock)")
+	db, err := sql.Open("pxmysql", "root:rootpwd@unix(/var/lib/mysql/mysqlx.sock)")
 	if err != nil {
 		log.Fatalln("open:", err)
 	}

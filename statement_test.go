@@ -21,7 +21,7 @@ import (
 
 func TestStatement_Close(t *testing.T) {
 	dsn := getTCPDSN("", "")
-	db, err := sql.Open("mysqlpx", dsn)
+	db, err := sql.Open("pxmysql", dsn)
 	xt.OK(t, err)
 
 	stmt := "SELECT ?"
@@ -40,7 +40,7 @@ func TestStatement_Close(t *testing.T) {
 
 func testOpenQueryRowsClose() ([]string, error) {
 	dsn := getTCPDSN("", "")
-	db, err := sql.Open("mysqlpx", dsn)
+	db, err := sql.Open("pxmysql", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func testOpenQueryRowsClose() ([]string, error) {
 func TestStatement_ExecContext(t *testing.T) {
 	t.Run("respect timeout", func(t *testing.T) {
 		dsn := getTCPDSN("", "")
-		db, err := sql.Open("mysqlpx", dsn)
+		db, err := sql.Open("pxmysql", dsn)
 		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 
@@ -109,7 +109,7 @@ func TestStatement_QueryContext(t *testing.T) {
 
 	t.Run("respect timeout", func(t *testing.T) {
 		dsn := getTCPDSN("", "")
-		db, err := sql.Open("mysqlpx", dsn)
+		db, err := sql.Open("pxmysql", dsn)
 		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 
@@ -122,7 +122,7 @@ func TestStatement_QueryContext(t *testing.T) {
 	})
 
 	t.Run("does not return sql.ErrNoRows", func(t *testing.T) {
-		db, err := sql.Open("mysqlpx", getTCPDSN("", ""))
+		db, err := sql.Open("pxmysql", getTCPDSN("", ""))
 		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 
@@ -133,7 +133,7 @@ func TestStatement_QueryContext(t *testing.T) {
 	})
 
 	t.Run("QueryRowContext does return sql.ErrNoRows", func(t *testing.T) {
-		db, err := sql.Open("mysqlpx", getTCPDSN("", ""))
+		db, err := sql.Open("pxmysql", getTCPDSN("", ""))
 		xt.OK(t, err)
 		defer func() { _ = db.Close() }()
 

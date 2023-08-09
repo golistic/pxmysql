@@ -6,9 +6,11 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"os"
 )
 
-const driverName = "mysqlpx"
+const driverName = "pxmysql"
+const driverNameMySQL = "mysql"
 
 type Driver struct{}
 
@@ -19,6 +21,10 @@ var (
 
 func init() {
 	sql.Register(driverName, &Driver{})
+
+	if s, ok := os.LookupEnv("PXMYSQL_DONT_REGISTER_MYSQL"); !ok || s != "1" {
+		sql.Register(driverNameMySQL, &Driver{})
+	}
 }
 
 // Open returns a new connection to the MySQL database using MySQL X Protocol.
