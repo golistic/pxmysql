@@ -38,7 +38,7 @@ func (r *rows) Close() error {
 }
 
 func (r *rows) Next(dest []driver.Value) error {
-	if r.currRowIndex >= len(r.xpresult.Rows) {
+	if r.xpresult == nil || r.currRowIndex >= len(r.xpresult.Rows) {
 		return io.EOF
 	}
 

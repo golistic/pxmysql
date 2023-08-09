@@ -4,7 +4,6 @@ package pxmysql
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"time"
 
@@ -103,7 +102,7 @@ func (s *statement) QueryContext(ctx context.Context, args []driver.NamedValue) 
 	}
 
 	if len(execResult.Rows) == 0 {
-		return nil, sql.ErrNoRows
+		return &rows{}, nil
 	}
 
 	r := &rows{

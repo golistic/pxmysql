@@ -67,9 +67,9 @@ func TestConnection_Begin(t *testing.T) {
 		xt.OK(t, tx.Rollback())
 
 		q := fmt.Sprintf("SELECT c1 FROM `%s` WHERE id = ?", tbl)
-		_, err = db.QueryContext(context.Background(), q, id)
-		xt.KO(t, err)
-		xt.Eq(t, err.Error(), sql.ErrNoRows.Error())
+		rows, err := db.QueryContext(context.Background(), q, id)
+		xt.OK(t, err)
+		xt.Assert(t, !rows.Next())
 	})
 }
 
@@ -124,8 +124,6 @@ func TestConnector_Connect(t *testing.T) {
 		time.Sleep(3 * time.Second) // server should close connection
 
 		var cnxIDAfter int
-		db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxIDAfter)
-
 		xt.OK(t, db.QueryRow("SELECT CONNECTION_ID()").Scan(&cnxIDAfter))
 
 		xt.Assert(t, cnxID != cnxIDAfter)
