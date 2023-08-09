@@ -44,7 +44,8 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("mysqlpx", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
+	// can use pxmysql or mysql as driver name
+	db, err := sql.Open("mysql", "scott:tiger@tcp(127.0.0.1:33060)/somedb?useTLS=true")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -250,6 +251,15 @@ The `ConnectConfig`-type has the following attributes:
 * `TimeZoneName`: set time location for decoding DATETIME and TIMESTAMP MySQL
   data types to Go `time.Time` (see [MySQL Manual to support this][2])
   (default: UTC)
+
+### Environment Variables
+
+The following lists environment variables that can be set to configure the `pxmysql`
+package.
+
+* `PXMYSQL_DONT_REGISTER_MYSQL`: use this to not register the name `mysql` as driver.
+  This can be handy when you want to use both the [conventional driver][3] and the driver
+  of this package.
 
 ### Authentication methods
 

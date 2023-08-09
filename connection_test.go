@@ -17,7 +17,7 @@ import (
 
 func TestConnection_Begin(t *testing.T) {
 	dsn := getTCPDSN()
-	db, err := sql.Open("mysqlpx", dsn)
+	db, err := sql.Open("pxmysql", dsn)
 	xt.OK(t, err)
 	defer func() { _ = db.Close() }()
 
@@ -75,7 +75,7 @@ func TestConnection_Begin(t *testing.T) {
 
 func TestConnection_ExecContext(t *testing.T) {
 	dsn := getTCPDSN()
-	db, err := sql.Open("mysqlpx", dsn)
+	db, err := sql.Open("pxmysql", dsn)
 	xt.OK(t, err)
 	defer func() { _ = db.Close() }()
 
@@ -91,7 +91,7 @@ func TestConnection_ExecContext(t *testing.T) {
 
 func TestConnection_QueryContext(t *testing.T) {
 	dsn := getTCPDSN()
-	db, err := sql.Open("mysqlpx", dsn)
+	db, err := sql.Open("pxmysql", dsn)
 	xt.OK(t, err)
 	defer func() { _ = db.Close() }()
 
@@ -108,7 +108,7 @@ func TestConnection_QueryContext(t *testing.T) {
 func TestConnector_Connect(t *testing.T) {
 	t.Run("server closing stale connection and reconnect", func(t *testing.T) {
 		dsn := getTCPDSN()
-		db, err := sql.Open("mysqlpx", dsn)
+		db, err := sql.Open("pxmysql", dsn)
 		xt.OK(t, err)
 
 		_, err = db.Exec("SET @@SESSION.mysqlx_wait_timeout = 2")
