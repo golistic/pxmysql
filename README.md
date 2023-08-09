@@ -105,7 +105,7 @@ Requirements
 ------------
 
 * Go 1.19 or greater
-* MySQL 8.0 or greater (built using 8.0.28)
+* MySQL 8.0 or greater (built using 8.0.34)
 
 ### Dependencies
 

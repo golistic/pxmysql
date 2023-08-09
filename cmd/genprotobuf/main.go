@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	mysqlVersion = "8.0.32"
+	mysqlVersion = "8.0.34"
 	baseURL      = "https://raw.githubusercontent.com/mysql/mysql-server/mysql-" + mysqlVersion + "/plugin/x/protocol/protobuf/"
 )
 
