@@ -98,7 +98,7 @@ func BenchmarkStatement_QueryContext(b *testing.B) {
 }
 
 func TestStatement_QueryContext(t *testing.T) {
-	t.Run("query rows", func(t *testing.T) {
+	t.Run("has rows in result", func(t *testing.T) {
 		tableNames, err := testOpenQueryRowsClose()
 		xt.OK(t, err)
 
@@ -119,5 +119,28 @@ func TestStatement_QueryContext(t *testing.T) {
 		_, err = db.QueryContext(ctx, "SELECT SLEEP(5)")
 		xt.KO(t, err)
 		xt.Assert(t, errors.Is(err, mysqlerrors.ErrContextDeadlineExceeded), err.Error())
+	})
+
+	t.Run("does not return sql.ErrNoRows", func(t *testing.T) {
+		db, err := sql.Open("mysqlpx", getTCPDSN("", ""))
+		xt.OK(t, err)
+		defer func() { _ = db.Close() }()
+
+		stmt := `SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA = ? ORDER BY TABLE_SCHEMA`
+		rows, err := db.QueryContext(context.Background(), stmt, "_this_does_not_exists_")
+		xt.OK(t, err)
+		xt.Assert(t, !rows.Next(), "expected no rows")
+	})
+
+	t.Run("QueryRowContext does return sql.ErrNoRows", func(t *testing.T) {
+		db, err := sql.Open("mysqlpx", getTCPDSN("", ""))
+		xt.OK(t, err)
+		defer func() { _ = db.Close() }()
+
+		var name string
+		stmt := `SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA = ? ORDER BY TABLE_SCHEMA`
+		err = db.QueryRowContext(context.Background(), stmt, "_this_does_not_exists_").Scan(&name)
+		xt.KO(t, err)
+		xt.Assert(t, errors.Is(err, sql.ErrNoRows))
 	})
 }
