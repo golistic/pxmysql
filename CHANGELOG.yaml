@@ -3,12 +3,31 @@ pxmysql:
       projectURL: https://github.com/golistic/pxmysql
       description: |
         All notable changes to this project will be documented in this file.
-        Note: Using YAML is experimental, but since it is human readable, should be OK.
+        
+        We follow the conventionalcommits.org specification.
+        
+        Change entries with prefix `(!)` warn for a "breaking change".
   - versions:
-      - version: v0.9.0
+      - version: v0.9
         date: 2023-01-24
         description: Initial development release (not production ready).
         patches:
+          - version: v0.9.6
+            date: 2023-08-09
+            fixed:
+              driver:
+                - `pxmysql.QueryContext()` will now correctly return empty Rows-object when
+                  result has no rows, instead of returning `sql.ErrNoRows`
+                - (!) Go `sql` driver is now named `pxmysql` so it aligns with the package name;
+                  we do not keep backward compatibility
+                - We support the driver name "mysql" as some projects need to use this name. When
+                  this is needed, load anonymous sub-package `github.com/golistic/pxmysql/mysql`
+            added:
+              driver:
+                - We support the driver name "mysql" as some projects need to use this name. When
+                  this is needed, load anonymous sub-package `github.com/golistic/pxmysql/mysql`
+              build:
+                - Upgrade ProtoBuf MySQL code to MySQL 8.0.34 (but no changes)
           - version: v0.9.5
             date: 2023-05-28
             fixed:
