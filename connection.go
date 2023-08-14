@@ -89,6 +89,8 @@ func (c *connection) ExecContext(ctx context.Context, query string, args []drive
 		return nil, handleError(err)
 	}
 
+	defer func() { _ = prep.Deallocate(ctx) }()
+
 	stmt := &statement{
 		prepared: prep,
 	}
@@ -101,6 +103,8 @@ func (c *connection) QueryContext(ctx context.Context, query string, args []driv
 	if err != nil {
 		return nil, handleError(err)
 	}
+
+	defer func() { _ = prep.Deallocate(ctx) }()
 
 	stmt := &statement{
 		prepared: prep,
