@@ -74,18 +74,57 @@ func TestConnection_Begin(t *testing.T) {
 }
 
 func TestConnection_ExecContext(t *testing.T) {
-	dsn := getTCPDSN()
-	db, err := sql.Open("pxmysql", dsn)
-	xt.OK(t, err)
-	defer func() { _ = db.Close() }()
-
 	t.Run("respect timeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		dsn := getTCPDSN()
+		db, err := sql.Open("pxmysql", dsn)
+		xt.OK(t, err)
+		defer func() { _ = db.Close() }()
+
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 		defer cancel()
 
-		_, err := db.ExecContext(ctx, "SELECT SLEEP(5)")
+		_, err = db.ExecContext(ctx, "SELECT SLEEP(5)")
 		xt.KO(t, err)
 		xt.Assert(t, errors.Is(err, mysqlerrors.ErrContextDeadlineExceeded), err.Error())
+	})
+
+	t.Run("prepared statement should close using Query", func(t *testing.T) {
+		dsn := getTCPDSN()
+		db, err := sql.Open("pxmysql", dsn)
+		xt.OK(t, err)
+		defer func() { _ = db.Close() }()
+
+		needle := "SDFIciwkdixks"
+		stmt := "/* " + needle + " */ SELECT COUNT(*) FROM performance_schema.prepared_statements_instances WHERE SQL_TEXT LIKE ?"
+		needleParam := "%" + needle + "%"
+
+		for i := 0; i < 2; i++ {
+			var got int
+			xt.OK(t, db.QueryRowContext(context.Background(), stmt, needleParam).Scan(&got))
+			xt.Eq(t, 1, got) // 1 because the query is seeing itself
+		}
+	})
+
+	t.Run("prepared statement should close using Exec", func(t *testing.T) {
+		dsn := getTCPDSN()
+		db, err := sql.Open("pxmysql", dsn)
+		xt.OK(t, err)
+		defer func() { _ = db.Close() }()
+
+		needle := "owicIOwidols"
+		stmt := "/* " + needle + " */ DELETE FROM mysql.user WHERE user = 'nobody'"
+		needleParam := "%" + needle + "%"
+
+		selectStmt := "SELECT COUNT(*) FROM performance_schema.prepared_statements_instances WHERE SQL_TEXT LIKE ?"
+
+		for i := 0; i < 2; i++ {
+			var got int
+			_, err := db.ExecContext(context.Background(), stmt)
+			xt.OK(t, err)
+			xt.OK(t, db.QueryRowContext(context.Background(), selectStmt, needleParam).Scan(&got))
+			xt.Eq(t, 0, got)
+		}
 	})
 }
 
