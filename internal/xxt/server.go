@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golistic/xstrings"
+	"github.com/golistic/xgo/xstrings"
 )
 
 type MySQLServer struct {
@@ -44,27 +44,31 @@ func NewMySQLServer(tctx *TestContext, container *Container, schema string) (*My
 		if parts == nil {
 			return nil, NewTestErr(err, errMsg, container.Name, "reVersion")
 		}
-		// simplistic way of checking the MySQL version, but works..
-		maj, err := strconv.ParseInt(parts[0][1], 10, 64)
+
+		// simplistic way of checking the MySQL version
+		vMaj, err := strconv.ParseInt(parts[0][1], 10, 64)
 		if err != nil {
 			return nil, NewTestErr(nil, errMsg, container.Name)
 		}
-		min, err := strconv.ParseInt(parts[0][2], 10, 64)
+
+		vMin, err := strconv.ParseInt(parts[0][2], 10, 64)
 		if err != nil {
 			return nil, NewTestErr(nil, errMsg, container.Name)
 
 		}
+
 		patch, err := strconv.ParseInt(parts[0][3], 10, 64)
 		if err != nil {
 			return nil, NewTestErr(nil, errMsg, container.Name)
 		}
-		v := maj*1000000 + min*1000 + patch
+
+		v := vMaj*1000000 + vMin*1000 + patch
 		if v < minMySQLVersion {
 			return nil, NewTestErr(fmt.Errorf("MySQL version must be %s or greater", minMySQLVersionStr),
 				errMsg, container.Name)
 		}
 
-		server.Version = fmt.Sprintf("%d.%d.%d", maj, min, patch)
+		server.Version = fmt.Sprintf("%d.%d.%d", vMaj, vMin, patch)
 	}
 
 	server.Schema = schema

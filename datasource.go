@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/golistic/xconv"
-	"github.com/golistic/xstrings"
+	"github.com/golistic/xgo/xconv"
+	"github.com/golistic/xgo/xstrings"
 )
 
 var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?/?(\?)?(.*)?`)

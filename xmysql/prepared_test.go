@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xutil"
-	"github.com/golistic/xstrings"
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xstrings"
+	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/mysqlerrors"
@@ -61,7 +60,7 @@ func TestPrepared_Execute(t *testing.T) {
 			int32(7),
 			int64(7),
 			"8",
-			xutil.StringPtr("9"),
+			xstrings.Pointer("9"),
 			[]byte("10"),
 			float32(11),
 			&float12Ptr,

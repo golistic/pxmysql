@@ -6,7 +6,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/golistic/xconv"
+	"github.com/golistic/xgo/xconv"
 )
 
 // Uint64 represents an uint64 (any MySQL unsigned integer type) that may be NULL.

@@ -4,8 +4,7 @@ pxmysql - Driver using the MySQL X Protocol
 Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 <div>
-  <img alt="Go: 1.19" src="_badges/go-version.svg">
-  <a href="https://goreportcard.com/report/github.com/golistic/pxmysql"><img alt="Go Report: A+" src="_badges/go-report.svg"></a>
+  <img alt="Go: 1.21" src="_badges/go-version.svg">
   <img alt="license: MIT" src="_badges/license.svg">
 </div>
 

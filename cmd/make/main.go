@@ -10,7 +10,6 @@ func main() {
 	gomake.RegisterTargets(
 		&gomake.TargetBadges,
 		&gomake.TargetGoLint,
-		&gomake.TargetGoReportCard,
 	)
 	gomake.Make()
 }

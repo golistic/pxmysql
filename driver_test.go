@@ -11,8 +11,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golistic/xstrings"
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xstrings"
+	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/mysqlerrors"

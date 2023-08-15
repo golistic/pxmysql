@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/geertjanvdk/xkit/xmath"
+	"github.com/golistic/xgo/xmath"
 )
 
 const stmtPlaceholder = '?'

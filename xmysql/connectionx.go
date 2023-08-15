@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xos"
+	"github.com/golistic/envs"
 
 	"github.com/golistic/pxmysql/mysqlerrors"
 )
@@ -45,7 +45,7 @@ func NewConnection(config *ConnectConfig) (*Connection, error) {
 		cnx.config = DefaultConnectConfig.Clone()
 	}
 
-	if err := xos.EnvFromStruct(cnx.config); err != nil {
+	if err := envs.OSEnviron(cnx.config); err != nil {
 		return nil, fmt.Errorf("failed reading from environment (%w)", err)
 	}
 

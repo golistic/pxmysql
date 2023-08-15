@@ -6,8 +6,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/golistic/xstrings"
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xstrings"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestDriver_Open(t *testing.T) {
