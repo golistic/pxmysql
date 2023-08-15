@@ -103,7 +103,7 @@ heading (bit like a roadmap).
 Requirements
 ------------
 
-* Go 1.19 or greater
+* Go 1.21 or greater
 * MySQL 8.0 or greater (built using 8.0.34)
 
 ### Dependencies
