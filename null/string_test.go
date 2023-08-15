@@ -5,7 +5,7 @@ package null
 import (
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestString_Compare(t *testing.T) {

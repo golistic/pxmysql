@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golistic/xos"
+	"github.com/golistic/xgo/xos"
 )
 
 const (

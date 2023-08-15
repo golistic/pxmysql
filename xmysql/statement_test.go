@@ -5,7 +5,7 @@ package xmysql
 import (
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestPlaceholderIndexes(t *testing.T) {

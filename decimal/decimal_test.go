@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestNewDecimal(t *testing.T) {

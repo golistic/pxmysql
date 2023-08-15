@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestRows_Next(t *testing.T) {

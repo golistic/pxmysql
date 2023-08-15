@@ -6,7 +6,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/golistic/xconv"
+	"github.com/golistic/xgo/xconv"
 )
 
 // Int64 represents an int64 (any MySQL signed integral type) that may be NULL.

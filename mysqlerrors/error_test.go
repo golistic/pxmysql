@@ -5,7 +5,7 @@ package mysqlerrors
 import (
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestMySLQError_Error(t *testing.T) {

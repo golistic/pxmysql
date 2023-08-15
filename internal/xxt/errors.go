@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/mysqlerrors"
 )

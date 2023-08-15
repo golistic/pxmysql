@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xt"
 )
 
 func TestBytes_Compare(t *testing.T) {

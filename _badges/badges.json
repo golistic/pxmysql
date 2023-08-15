@@ -4,12 +4,6 @@
   "destFolder": "_badges",
   "badges": [
     {
-      "name": "go-report",
-      "label": "GO REPORT",
-      "messageFunc": "go.reportcard.grade",
-      "color": "green"
-    },
-    {
       "name": "go-version",
       "label": "GO",
       "messageFunc": "go.mod.version",

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geertjanvdk/xkit/xnet"
-	"github.com/golistic/xstrings"
-	"github.com/golistic/xt"
+	"github.com/golistic/xgo/xnet"
+	"github.com/golistic/xgo/xstrings"
+	"github.com/golistic/xgo/xt"
 )
 
 const (
