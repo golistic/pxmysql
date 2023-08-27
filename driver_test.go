@@ -103,6 +103,14 @@ func TestSQLDriver_Open(t *testing.T) {
 		xt.KO(t, err)
 		xt.Eq(t, "unsupported protocol 'UDP'", errors.Unwrap(err).Error())
 	})
+
+	t.Run("not enough configured with missing username", func(t *testing.T) {
+		drv := &Driver{}
+		_, err := drv.Open(":tiger@tcp(localhost)/")
+		xt.KO(t, err)
+		xt.Eq(t, "configuration not valid (user missing)", err.Error())
+		xt.Eq(t, "user missing", errors.Unwrap(err).Error())
+	})
 }
 
 func TestConnection_Ping(t *testing.T) {

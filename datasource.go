@@ -4,79 +4,66 @@ package pxmysql
 
 import (
 	"fmt"
-	"net/url"
-	"regexp"
-	"strings"
 
 	"github.com/golistic/xgo/xconv"
-	"github.com/golistic/xgo/xstrings"
+	"github.com/golistic/xgo/xsql"
 )
 
-var reDSN = regexp.MustCompile(`(.*?)(?::(.*?))?@(\w+)\((.*?)\)(?:/(\w+))?/?(\?)?(.*)?`)
-
+// DataSource defines the configuration of the connection. It embeds xsql.DataSource
+// and extends it with attributes defined in the Options.
 type DataSource struct {
-	Driver   string
-	User     string
-	Password string
-	Protocol string
-	Address  string
-	Schema   string
-	UseTLS   bool
+	xsql.DataSource
+
+	UseTLS bool
 }
 
-// ParseDSN parsers the name as a data source name (DSN).
-func ParseDSN(name string) (*DataSource, error) {
-	errMsg := "invalid data source name (%w)"
-
-	m := reDSN.FindAllStringSubmatch(name, -1)
-	if m == nil {
-		return nil, fmt.Errorf(errMsg, fmt.Errorf("could not parse"))
+// NewDataSource instantiates a DataSource using the Data Source Name (DSN).
+func NewDataSource(name string) (DataSource, error) {
+	xds, err := xsql.ParseDSN(name)
+	if err != nil {
+		return DataSource{}, err
 	}
 
-	protocol := strings.ToLower(m[0][3])
-	if !(protocol == "unix" || protocol == "tcp") {
-		return nil, fmt.Errorf(errMsg, fmt.Errorf("unsupported protocol '%s'", m[0][3]))
+	ds := DataSource{
+		DataSource: *xds,
+		UseTLS:     false,
 	}
 
-	cfg := &DataSource{
-		User:     m[0][1],
-		Password: m[0][2],
-		Protocol: protocol,
-		Address:  m[0][4],
-		Schema:   m[0][5],
+	if err := ds.handleOptions(); err != nil {
+		return DataSource{}, err
 	}
 
-	if xstrings.SliceHas(m[0], "?") {
-		query, err := url.ParseQuery(m[0][len(m[0])-1])
+	if err := ds.CheckValidity(); err != nil {
+		return DataSource{}, fmt.Errorf("configuration not valid (%w)", err)
+	}
+
+	return ds, nil
+}
+
+// CheckValidity returns whether the DataSource has enough configuration to establish
+// a connection. Needed are the address, protocol, and username.
+func (ds *DataSource) CheckValidity() error {
+	switch {
+	case ds.Address == "":
+		return fmt.Errorf("address missing")
+	case ds.User == "":
+		return fmt.Errorf("user missing")
+	case ds.Protocol == "":
+		return fmt.Errorf("protocol missing")
+	default:
+		return nil
+	}
+}
+
+func (ds *DataSource) handleOptions() error {
+	var err error
+	useTLS := ds.Options.Get("useTLS")
+	if useTLS != "" {
+		ds.UseTLS, err = xconv.ParseBool(useTLS)
 		if err != nil {
-			return nil, fmt.Errorf(errMsg, fmt.Errorf("could not parse query part"))
-		}
-		if v, have := query["useTLS"]; have {
-			if cfg.UseTLS, err = xconv.ParseBool(v[0]); err != nil {
-				return nil, fmt.Errorf(errMsg, fmt.Errorf("invalid value for useTLS query parameter"))
-			}
+			return fmt.Errorf("invalid value for useTLS option (was %s)", useTLS)
 		}
 	}
 
-	return cfg, nil
-}
-
-func (d *DataSource) String() string {
-	n := fmt.Sprintf("%s:%s@%s(%s)", d.User, d.Password, d.Protocol, d.Address)
-	if d.Schema != "" {
-		n += "/" + d.Schema
-	} else {
-		n += "/"
-	}
-
-	var queryParts []string
-	if d.UseTLS {
-		queryParts = append(queryParts, "useTLS=true")
-	}
-
-	if len(queryParts) > 0 {
-		n += "?" + strings.Join(queryParts, "&")
-	}
-
-	return n
+	return nil
 }
