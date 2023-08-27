@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxnotice"
+	"github.com/golistic/pxmysql/xmysql/internal/network"
 )
 
-type stateChanges struct {
+type StateChanges struct {
 	ClientID          uint64
 	GeneratedInsertID uint64
 	RowsAffected      uint64
@@ -23,10 +24,10 @@ type notices struct {
 	groupReplicationStateChanges []*mysqlxnotice.GroupReplicationStateChanged
 	serverHello                  *mysqlxnotice.ServerHello
 	unhandled                    []mysqlxnotice.Frame_Type
-	stateChanges                 stateChanges
+	stateChanges                 StateChanges
 }
 
-func (n *notices) add(msg *serverMessage) error {
+func (n *notices) add(msg *network.ServerMessage) error {
 	frame := &mysqlxnotice.Frame{}
 	if err := msg.Unmarshall(frame); err != nil {
 		return fmt.Errorf("failed unmarshalling notice message (%w)", err)
@@ -47,10 +48,10 @@ func (n *notices) add(msg *serverMessage) error {
 		n.sessionVariableChanges = append(n.sessionVariableChanges, m)
 	case mysqlxnotice.Frame_SESSION_STATE_CHANGED:
 		m := &mysqlxnotice.SessionStateChanged{}
-		if err := UnmarshalPartial(frame.Payload, m); err != nil {
+		if err := network.UnmarshalPartial(frame.Payload, m); err != nil {
 			return fmt.Errorf("failed unmarshalling '%s' (%w)", m.String(), err)
 		}
-		trace("state", m)
+		network.Trace("state", m)
 
 		switch m.GetParam() {
 		case mysqlxnotice.SessionStateChanged_GENERATED_INSERT_ID:

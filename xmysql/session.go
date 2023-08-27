@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
 package xmysql
 
@@ -8,7 +8,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"net"
 	"os"
@@ -17,16 +16,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golistic/xgo/xstrings"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/golistic/pxmysql/internal/mysqlx/mysqlx"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxconnection"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxprepare"
-	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxresultset"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsession"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsql"
 	"github.com/golistic/pxmysql/mysqlerrors"
 	"github.com/golistic/pxmysql/null"
+	"github.com/golistic/pxmysql/xmysql/internal/network"
+	"github.com/golistic/pxmysql/xmysql/internal/scalars"
+	"github.com/golistic/pxmysql/xmysql/internal/statements"
 )
 
 const DefaultPort = "33060"
@@ -38,6 +39,7 @@ const DefaultHost = "127.0.0.1"
 // All interaction with the server goes through this session.
 type Session struct {
 	Config             ConnectConfig
+	currentSchemaName  *string
 	id                 int
 	mysqlVersion       string
 	conn               net.Conn
@@ -79,10 +81,11 @@ func NewSession(config *ConnectConfig) (*Session, error) {
 	cfg.Password = nil
 
 	ses := &Session{
-		password:     password,
-		Config:       cfg,
-		conn:         nil,
-		timeLocation: defaultTimeLocation,
+		Config:            cfg,
+		password:          password,
+		currentSchemaName: xstrings.Pointer(cfg.Schema),
+		conn:              nil,
+		timeLocation:      DefaultTimeLocation,
 	}
 
 	if ses.Config.UnixSockAddr != "" {
@@ -117,7 +120,7 @@ func NewSession(config *ConnectConfig) (*Session, error) {
 	if ses.Config.AuthMethod == "" {
 		ses.Config.AuthMethod = DefaultConnectConfig.AuthMethod
 	} else {
-		if !supportedAuthMethods.Has(ses.Config.AuthMethod) {
+		if !SupportedAuthMethods().Has(ses.Config.AuthMethod) {
 			return nil, fmt.Errorf("unsupported authentication type '%s'", ses.Config.AuthMethod)
 		}
 	}
@@ -167,11 +170,13 @@ func (ses *Session) Close() error {
 	if ses == nil {
 		return nil
 	}
-	if err := write(context.Background(), ses, &mysqlxsession.Close{}); err != nil {
+	if err := network.Write(context.Background(), ses.conn,
+		&mysqlxsession.Close{}, ses.maxAllowedPacket); err != nil {
 		return err
 	}
 
-	if err := write(context.Background(), ses, &mysqlxconnection.Close{}); err != nil {
+	if err := network.Write(context.Background(), ses.conn,
+		&mysqlxconnection.Close{}, ses.maxAllowedPacket); err != nil {
 		return fmt.Errorf("failed writing closing message (%w)", err)
 	}
 
@@ -179,6 +184,16 @@ func (ses *Session) Close() error {
 		return fmt.Errorf("failed closing session (%w)", err)
 	}
 	return nil
+}
+
+// Write writes protobuf msg using this session's connection to the server.
+func (ses *Session) Write(ctx context.Context, msg proto.Message) error {
+	return network.Write(ctx, ses.conn, msg, ses.maxAllowedPacket)
+}
+
+// Read reads a protobuf message using this session's connection to the server.
+func (ses *Session) Read(ctx context.Context) (*network.ServerMessage, error) {
+	return network.Read(ctx, ses.conn)
 }
 
 // UsesTLS returns whether this session uses TLS.
@@ -196,15 +211,15 @@ func (ses *Session) AuthMethod() AuthMethodType {
 func (ses *Session) ExecuteStatement(ctx context.Context, stmt string, args ...any) (*Result, error) {
 	if len(args) > 0 {
 		var err error
-		stmt, err = substitutePlaceholders(stmt, args...)
+		stmt, err = statements.SubstitutePlaceholders(stmt, args...)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if err := write(ctx, ses, &mysqlxsql.StmtExecute{
+	if err := network.Write(ctx, ses.conn, &mysqlxsql.StmtExecute{
 		Stmt: []byte(stmt),
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return nil, fmt.Errorf("failed writing statement execution (%w)", err)
 	}
 
@@ -225,7 +240,7 @@ func (ses *Session) ExecuteStatement(ctx context.Context, stmt string, args ...a
 func (ses *Session) PrepareStatement(ctx context.Context, statement string) (*Prepared, error) {
 	stmtID := atomic.AddUint32(&ses.preparedStmtCount, 1)
 
-	if err := write(ctx, ses, &mysqlxprepare.Prepare{
+	if err := network.Write(ctx, ses.conn, &mysqlxprepare.Prepare{
 		StmtId: &stmtID,
 		Stmt: &mysqlxprepare.Prepare_OneOfMessage{
 			Type: mysqlxprepare.Prepare_OneOfMessage_STMT.Enum(),
@@ -233,7 +248,7 @@ func (ses *Session) PrepareStatement(ctx context.Context, statement string) (*Pr
 				Stmt: []byte(statement),
 			},
 		},
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return nil, err
 	}
 
@@ -248,14 +263,14 @@ func (ses *Session) PrepareStatement(ctx context.Context, statement string) (*Pr
 	return &Prepared{
 		session:         ses,
 		result:          res,
-		numPlaceholders: len(placeholderIndexes(stmtPlaceholder, statement)),
+		numPlaceholders: len(statements.PlaceholderIndexes(statements.Placeholder, statement)),
 	}, nil
 }
 
 func (ses *Session) DeallocatePrepareStatement(ctx context.Context, stmtID uint32) error {
-	if err := write(ctx, ses, &mysqlxprepare.Deallocate{
+	if err := network.Write(ctx, ses.conn, &mysqlxprepare.Deallocate{
 		StmtId: &stmtID,
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return err
 	}
 
@@ -264,14 +279,23 @@ func (ses *Session) DeallocatePrepareStatement(ctx context.Context, stmtID uint3
 
 // SetCurrentSchema sets the current schema (database) of this session.
 func (ses *Session) SetCurrentSchema(ctx context.Context, name string) error {
+
 	if _, err := ses.ExecuteStatement(ctx, "USE `"+name+"`"); err != nil {
 		return err
 	}
+
+	ses.currentSchemaName = xstrings.Pointer(name)
+
 	return nil
 }
 
 // CurrentSchemaName retrieves the current schema (database) of this session.
 func (ses *Session) CurrentSchemaName(ctx context.Context) (string, error) {
+
+	if ses.currentSchemaName != nil {
+		return *ses.currentSchemaName, nil
+	}
+
 	res, err := ses.ExecuteStatement(ctx, "SELECT SCHEMA()")
 	if err != nil {
 		return "", err
@@ -451,14 +475,14 @@ func (ses *Session) Open(ctx context.Context) error {
 
 func (ses *Session) negotiate(ctx context.Context) error {
 	if ses.Config.UseTLS {
-		if err := write(ctx, ses, &mysqlxconnection.CapabilitiesSet{
+		if err := network.Write(ctx, ses.conn, &mysqlxconnection.CapabilitiesSet{
 			Capabilities: &mysqlxconnection.Capabilities{
 				Capabilities: []*mysqlxconnection.Capability{{
 					Name:  proto.String("tls"),
-					Value: boolAsScalar(true),
+					Value: scalars.Bool(true),
 				}},
 			},
-		}); err != nil {
+		}, ses.maxAllowedPacket); err != nil {
 			return fmt.Errorf("failed setting capabilities (%w)", err)
 		}
 
@@ -472,12 +496,12 @@ func (ses *Session) negotiate(ctx context.Context) error {
 		// if TLS is supported, we got an OK, and we do the TLS handshake
 		var tlsConfig *tls.Config
 		if ses.Config.TLSServerCACertPath != "" {
-			if err := addServerCACertFromFile(ses.Config.TLSServerCACertPath); err != nil {
+			if err := network.AddServerCACertFromFile(ses.Config.TLSServerCACertPath); err != nil {
 				return err
 			}
 			tlsConfig = &tls.Config{
 				InsecureSkipVerify: false, // explicit to make clear
-				RootCAs:            serverCAPool,
+				RootCAs:            network.ServerCAPool,
 				ServerName:         ses.serverHostname(),
 			}
 		} else {
@@ -507,7 +531,7 @@ func (ses *Session) authenticate(ctx context.Context) error {
 		if ses.serverCapabilities != nil && ses.serverCapabilities.TLS {
 			authMethods = append(authMethods, AuthMethodPlain)
 		}
-		authMethods = append(authMethods, defaultAuthMethods...)
+		authMethods = append(authMethods, DefaultAuthMethods()...)
 	} else if ses.usedAuthMethod == AuthMethodPlain && !tlsOK {
 		return fmt.Errorf("plain text authentication only supported over TLS")
 	} else {
@@ -538,9 +562,9 @@ func (ses *Session) authenticateWith(ctx context.Context, method AuthMethodType)
 	}
 
 	// send AuthenticateStart
-	if err := write(ctx, ses, &mysqlxsession.AuthenticateStart{
+	if err := network.Write(ctx, ses.conn, &mysqlxsession.AuthenticateStart{
 		MechName: proto.String(string(method)),
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return false, fmt.Errorf("failed starting authentication (%w)", err)
 	}
 
@@ -573,9 +597,9 @@ func (ses *Session) authenticateWith(ctx context.Context, method AuthMethodType)
 	}
 
 	// send AuthenticateContinue
-	if err := write(ctx, ses, &mysqlxsession.AuthenticateContinue{
+	if err := network.Write(ctx, ses.conn, &mysqlxsession.AuthenticateContinue{
 		AuthData: authData,
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return false, fmt.Errorf("failed continuing authentication (%w)", err)
 	}
 
@@ -598,10 +622,10 @@ func (ses *Session) authenticatePlain(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if err := write(ctx, ses, &mysqlxsession.AuthenticateStart{
+	if err := network.Write(ctx, ses.conn, &mysqlxsession.AuthenticateStart{
 		MechName: proto.String(string(AuthMethodPlain)),
 		AuthData: authData,
-	}); err != nil {
+	}, ses.maxAllowedPacket); err != nil {
 		return false, err
 	}
 
@@ -620,7 +644,7 @@ func (ses *Session) finishAuthentication(ctx context.Context) (bool, error) {
 }
 
 func (ses *Session) getServerCapabilities(ctx context.Context) error {
-	if err := write(ctx, ses, &mysqlxconnection.CapabilitiesGet{}); err != nil {
+	if err := network.Write(ctx, ses.conn, &mysqlxconnection.CapabilitiesGet{}, ses.maxAllowedPacket); err != nil {
 		return fmt.Errorf("failed getting capabilities (%w)", err)
 	}
 
@@ -665,76 +689,7 @@ CAST((SELECT VARIABLE_VALUE FROM performance_schema.global_variables WHERE VARIA
 }
 
 func (ses *Session) handleResult(ctx context.Context, doneWhen doneWhenFunc) (*Result, error) {
-	result := &Result{session: ses}
-
-	// force time zone
-	if ses.timeLocation != nil {
-		ctx = SetContextTimeLocation(ctx, ses.timeLocation)
-	} else {
-		ctx = SetContextTimeLocation(ctx, defaultTimeLocation)
-	}
-
-	for done := false; !done; {
-		msg, err := read(ctx, ses.conn)
-		switch {
-		case err == io.EOF:
-			done = true
-			continue
-		case err != nil:
-			return nil, err
-		}
-
-		msgType := msg.ServerMessageType()
-		switch msgType {
-		case mysqlx.ServerMessages_OK:
-			result.ok = true
-		case mysqlx.ServerMessages_ERROR:
-			return nil, mysqlerrors.NewFromServerMessage(msg)
-		case mysqlx.ServerMessages_CONN_CAPABILITIES:
-			result.serverCapabilities, err = NewServerCapabilitiesFromMessage(msg)
-			if err != nil {
-				return nil, err
-			}
-		case mysqlx.ServerMessages_SESS_AUTHENTICATE_CONTINUE:
-			m := &mysqlxsession.AuthenticateContinue{}
-			if err := msg.Unmarshall(m); err != nil {
-				return nil, fmt.Errorf("failed unmarshalling %s (%w)", msgType.String(), err)
-			}
-			result.authChallenge = m.AuthData
-		case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
-			result.authOK = true
-		case mysqlx.ServerMessages_NOTICE:
-			if err := result.notices.add(msg); err != nil {
-				return nil, err
-			}
-		case mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA:
-			m := &mysqlxresultset.ColumnMetaData{}
-			if err := msg.Unmarshall(m); err != nil {
-				return nil, fmt.Errorf("failed unmarshalling '%s' (%w)", msgType.String(), err)
-			}
-			result.Columns = append(result.Columns, m)
-		case mysqlx.ServerMessages_RESULTSET_ROW:
-			if err := result.readRow(ctx, msg); err != nil {
-				return nil, err
-			}
-		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
-			result.fetchDone = true
-		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
-			result.fetchDoneMoreResults = true
-		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-			result.stmtOK = true
-		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_OUT_PARAMS:
-			result.fetchDoneMoreOutParams = true
-		default:
-			trace("unhandled", msg)
-		}
-
-		if doneWhen != nil {
-			done = doneWhen(result)
-		}
-	}
-
-	return result, nil
+	return handleResult(ctx, ses, doneWhen)
 }
 
 func (ses *Session) serverHostname() string {

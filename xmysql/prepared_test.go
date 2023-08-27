@@ -15,6 +15,7 @@ import (
 	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/decimal"
+	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/mysqlerrors"
 	"github.com/golistic/pxmysql/null"
 	"github.com/golistic/pxmysql/xmysql"
@@ -25,11 +26,11 @@ func TestPrepared_Execute(t *testing.T) {
 
 	config := &xmysql.ConnectConfig{
 		Address:      testContext.XPluginAddr,
-		Username:     userNative,
+		Username:     xxt.UserNative,
 		Schema:       testSchema,
 		TimeZoneName: "UTC",
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)

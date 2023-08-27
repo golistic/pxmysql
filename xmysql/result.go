@@ -14,8 +14,10 @@ import (
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlx"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxresultset"
+	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsession"
 	"github.com/golistic/pxmysql/mysqlerrors"
 	"github.com/golistic/pxmysql/null"
+	"github.com/golistic/pxmysql/xmysql/internal/network"
 )
 
 const flagNotNull = 0x0010
@@ -58,6 +60,79 @@ type Result struct {
 	stmtID          uint32
 }
 
+func handleResult(ctx context.Context, ses *Session, doneWhen doneWhenFunc) (*Result, error) {
+	result := &Result{session: ses}
+
+	// force time zone
+	if ses.TimeLocation() != nil {
+		ctx = SetContextTimeLocation(ctx, ses.TimeLocation())
+	} else {
+		ctx = SetContextTimeLocation(ctx, DefaultTimeLocation)
+	}
+
+	for done := false; !done; {
+		msg, err := ses.Read(ctx)
+		switch {
+		case err == io.EOF:
+			done = true
+			continue
+		case err != nil:
+			return nil, err
+		}
+
+		msgType := msg.ServerMessageType()
+		switch msgType {
+		case mysqlx.ServerMessages_OK:
+			result.ok = true
+		case mysqlx.ServerMessages_ERROR:
+			return nil, mysqlerrors.NewFromServerMessage(msg)
+		case mysqlx.ServerMessages_CONN_CAPABILITIES:
+			result.serverCapabilities, err = NewServerCapabilitiesFromMessage(msg)
+			if err != nil {
+				return nil, err
+			}
+		case mysqlx.ServerMessages_SESS_AUTHENTICATE_CONTINUE:
+			m := &mysqlxsession.AuthenticateContinue{}
+			if err := msg.Unmarshall(m); err != nil {
+				return nil, fmt.Errorf("failed unmarshalling %s (%w)", msgType.String(), err)
+			}
+			result.authChallenge = m.AuthData
+		case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
+			result.authOK = true
+		case mysqlx.ServerMessages_NOTICE:
+			if err := result.notices.add(msg); err != nil {
+				return nil, err
+			}
+		case mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA:
+			m := &mysqlxresultset.ColumnMetaData{}
+			if err := msg.Unmarshall(m); err != nil {
+				return nil, fmt.Errorf("failed unmarshalling '%s' (%w)", msgType.String(), err)
+			}
+			result.Columns = append(result.Columns, m)
+		case mysqlx.ServerMessages_RESULTSET_ROW:
+			if err := result.readRow(ctx, msg); err != nil {
+				return nil, err
+			}
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
+			result.fetchDone = true
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
+			result.fetchDoneMoreResults = true
+		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+			result.stmtOK = true
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_OUT_PARAMS:
+			result.fetchDoneMoreOutParams = true
+		default:
+			network.Trace("unhandled", msg)
+		}
+
+		if doneWhen != nil {
+			done = doneWhen(result)
+		}
+	}
+
+	return result, nil
+}
+
 func (rs *Result) Warnings() []error {
 	if len(rs.notices.warnings) == 0 {
 		return nil
@@ -84,8 +159,8 @@ func (rs *Result) PreparedStatementID() uint32 {
 }
 
 // StateChanges returns the object contain eventual state changes.
-func (n *Result) StateChanges() stateChanges {
-	return n.notices.stateChanges
+func (rs *Result) StateChanges() StateChanges {
+	return rs.notices.stateChanges
 }
 
 // FetchRow fetches the next row for unbuffered results and stores it in Result.Row.
@@ -99,7 +174,7 @@ func (rs *Result) FetchRow(ctx context.Context) error {
 		return nil
 	}
 
-	msg, err := read(ctx, rs.session.conn)
+	msg, err := rs.session.Read(ctx)
 	switch {
 	case err == io.EOF:
 		return nil
@@ -110,10 +185,10 @@ func (rs *Result) FetchRow(ctx context.Context) error {
 	switch msg.ServerMessageType() {
 	case mysqlx.ServerMessages_RESULTSET_ROW:
 		// force time zone
-		if rs.session.timeLocation != nil {
-			ctx = SetContextTimeLocation(ctx, rs.session.timeLocation)
+		if rs.session.TimeLocation() != nil {
+			ctx = SetContextTimeLocation(ctx, rs.session.TimeLocation())
 		} else {
-			ctx = SetContextTimeLocation(ctx, defaultTimeLocation)
+			ctx = SetContextTimeLocation(ctx, DefaultTimeLocation)
 		}
 
 		if err := rs.readRow(ctx, msg); err != nil {
@@ -124,12 +199,12 @@ func (rs *Result) FetchRow(ctx context.Context) error {
 		rs.Row = nil
 		return nil
 	default:
-		trace("unhandled", msg)
+		network.Trace("unhandled", msg)
 		return nil
 	}
 }
 
-func (rs *Result) readRow(ctx context.Context, msg *serverMessage) error {
+func (rs *Result) readRow(ctx context.Context, msg *network.ServerMessage) error {
 	if msg == nil {
 		panic("serverMessage cannot be nil")
 	}
@@ -160,7 +235,7 @@ func (rs *Result) decodeValue(ctx context.Context, value []byte, column *mysqlxr
 	var goValue any
 	valid := len(value) > 0
 
-	if traceValues {
+	if network.TraceValues {
 		var notNull string
 		if column.GetFlags()&flagNotNull > 0 {
 			notNull = " NOT NULL"

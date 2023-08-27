@@ -1,6 +1,6 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package scalars
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxdatatypes"
 )
 
-func boolAsScalar(value bool) *mysqlxdatatypes.Any {
+func Bool(value bool) *mysqlxdatatypes.Any {
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
 		Scalar: &mysqlxdatatypes.Scalar{
@@ -23,7 +23,7 @@ func boolAsScalar(value bool) *mysqlxdatatypes.Any {
 	}
 }
 
-func nilAsScalar() *mysqlxdatatypes.Any {
+func Nil() *mysqlxdatatypes.Any {
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
 		Scalar: &mysqlxdatatypes.Scalar{
@@ -32,7 +32,7 @@ func nilAsScalar() *mysqlxdatatypes.Any {
 	}
 }
 
-func signedIntAsScalar[T constraints.Signed](value T) *mysqlxdatatypes.Any {
+func SignedInt[T constraints.Signed](value T) *mysqlxdatatypes.Any {
 	v := int64(value)
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
@@ -43,7 +43,7 @@ func signedIntAsScalar[T constraints.Signed](value T) *mysqlxdatatypes.Any {
 	}
 }
 
-func unsignedIntAsScalar[T constraints.Unsigned](value T) *mysqlxdatatypes.Any {
+func UnsignedInt[T constraints.Unsigned](value T) *mysqlxdatatypes.Any {
 	v := uint64(value)
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
@@ -54,7 +54,7 @@ func unsignedIntAsScalar[T constraints.Unsigned](value T) *mysqlxdatatypes.Any {
 	}
 }
 
-func stringAsScalar(value any) *mysqlxdatatypes.Any {
+func String(value any) *mysqlxdatatypes.Any {
 	var v []byte
 	if value != nil {
 		switch sv := value.(type) {
@@ -64,13 +64,13 @@ func stringAsScalar(value any) *mysqlxdatatypes.Any {
 			if sv != nil {
 				v = []byte(*sv)
 			} else {
-				return nilAsScalar()
+				return Nil()
 			}
 		default:
-			panic(fmt.Sprintf("stringAsScalar accepts string or *string; not %T", value))
+			panic(fmt.Sprintf("String accepts string or *string; not %T", value))
 		}
 	} else {
-		return nilAsScalar()
+		return Nil()
 	}
 
 	return &mysqlxdatatypes.Any{
@@ -84,7 +84,7 @@ func stringAsScalar(value any) *mysqlxdatatypes.Any {
 	}
 }
 
-func byteSliceAsScalar[T []byte](value T) *mysqlxdatatypes.Any {
+func Bytes[T []byte](value T) *mysqlxdatatypes.Any {
 	v := []byte(value)
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
@@ -97,7 +97,7 @@ func byteSliceAsScalar[T []byte](value T) *mysqlxdatatypes.Any {
 	}
 }
 
-func float32IntAsScalar[T ~float32](value T) *mysqlxdatatypes.Any {
+func Float32[T ~float32](value T) *mysqlxdatatypes.Any {
 	v := float32(value)
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
@@ -108,7 +108,7 @@ func float32IntAsScalar[T ~float32](value T) *mysqlxdatatypes.Any {
 	}
 }
 
-func float64IntAsScalar[T ~float64](value T) *mysqlxdatatypes.Any {
+func Float64[T ~float64](value T) *mysqlxdatatypes.Any {
 	v := float64(value)
 	return &mysqlxdatatypes.Any{
 		Type: mysqlxdatatypes.Any_SCALAR.Enum(),
@@ -119,15 +119,15 @@ func float64IntAsScalar[T ~float64](value T) *mysqlxdatatypes.Any {
 	}
 }
 
-func decimalAsScalar(value decimal.Decimal) *mysqlxdatatypes.Any {
+func Decimal(value decimal.Decimal) *mysqlxdatatypes.Any {
 	// MySQL X Protocol does not support sending the encoded BCD.
-	return stringAsScalar(value.String())
+	return String(value.String())
 }
 
-func timeAsScalar(value time.Time, timeZoneName string) (*mysqlxdatatypes.Any, error) {
+func Time(value time.Time, timeZoneName string) (*mysqlxdatatypes.Any, error) {
 	tz, err := time.LoadLocation(timeZoneName)
 	if err != nil {
 		return nil, err
 	}
-	return stringAsScalar(value.In(tz).Format("2006-01-02 15:04:05.999999")), nil
+	return String(value.In(tz).Format("2006-01-02 15:04:05.999999")), nil
 }
