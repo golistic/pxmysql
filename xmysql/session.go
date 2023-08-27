@@ -35,7 +35,7 @@ const DefaultHost = "127.0.0.1"
 // Session uses the Connection configuration to set up a session with
 // the MySQL server through the X Plugin. When a session is instantiated
 // the authentication start, connection is switched to TLS (if needed).
-// All interaction with the server is through this the session.
+// All interaction with the server goes through this session.
 type Session struct {
 	Config             ConnectConfig
 	id                 int
@@ -270,8 +270,8 @@ func (ses *Session) SetCurrentSchema(ctx context.Context, name string) error {
 	return nil
 }
 
-// CurrentSchema retrieves the current schema (database) of this session.
-func (ses *Session) CurrentSchema(ctx context.Context) (string, error) {
+// CurrentSchemaName retrieves the current schema (database) of this session.
+func (ses *Session) CurrentSchemaName(ctx context.Context) (string, error) {
 	res, err := ses.ExecuteStatement(ctx, "SELECT SCHEMA()")
 	if err != nil {
 		return "", err
@@ -366,7 +366,7 @@ func (ses *Session) TimeZone(ctx context.Context) (*time.Location, error) {
 
 // SessionID retrieves the MySQL server connection (session) ID.
 func (ses *Session) SessionID(ctx context.Context) (int, error) {
-	// CurrentSchema retrieves the current schema (database) of this session.
+	// CurrentSchemaName retrieves the current schema (database) of this session.
 	res, err := ses.ExecuteStatement(ctx, "SELECT CONNECTION_ID()")
 	if err != nil {
 		return 0, err
@@ -637,7 +637,7 @@ func (ses *Session) getServerCapabilities(ctx context.Context) error {
 
 func (ses *Session) metaInformation(ctx context.Context) error {
 
-	// note: CurrentSchema retrieves the current schema (database) of this session.
+	// note: CurrentSchemaName retrieves the current schema (database) of this session.
 
 	// we try to get everything in one query
 	res, err := ses.ExecuteStatement(ctx, `SELECT VERSION(), CONNECTION_ID(),

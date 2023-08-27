@@ -712,7 +712,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchema(context.Background())
+		schema, err := ses.CurrentSchemaName(context.Background())
 		xt.OK(t, err)
 		xt.Eq(t, testSchema, schema)
 	})
@@ -727,7 +727,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchema(context.Background())
+		schema, err := ses.CurrentSchemaName(context.Background())
 		xt.OK(t, err)
 		xt.Eq(t, "", schema)
 	})
