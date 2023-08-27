@@ -1,6 +1,6 @@
 // Copyright (c) 2022, Geert JM Vanderkelen
 
-package pxmysql
+package pxmysql_test
 
 import (
 	"context"

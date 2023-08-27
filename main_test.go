@@ -1,15 +1,16 @@
 // Copyright (c) 2022, Geert JM Vanderkelen
 
-package pxmysql
+package pxmysql_test
 
 import (
-	"context"
-	"database/sql/driver"
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/golistic/xgo/xt"
+
+	_ "github.com/golistic/pxmysql/register" // registers pxmysql
 
 	"github.com/golistic/pxmysql/internal/xxt"
 )
@@ -67,20 +68,15 @@ func getTCPDSN(credentials ...string) string {
 		testSchema)
 }
 
-func cnxType(t *testing.T, conn driver.Conn) string {
+func cnxType(t *testing.T, db *sql.DB) string {
 	t.Helper()
 
 	q := "SELECT IF(HOST='localhost', 'unix', 'tcp') As CnxType " +
 		"FROM performance_schema.processlist WHERE ID = CONNECTION_ID()"
 
-	cnx, ok := conn.(*connection)
-	xt.Assert(t, ok, "bad connection")
-
-	result, err := cnx.session.ExecuteStatement(context.Background(), q)
+	var ct string
+	err := db.QueryRow(q).Scan(&ct)
 	xt.OK(t, err)
 
-	for _, row := range result.Rows {
-		return row.Values[0].(string)
-	}
-	return ""
+	return ct
 }

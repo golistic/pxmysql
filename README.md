@@ -8,9 +8,9 @@ Copyright (c) 2022, 2023, Geert JM Vanderkelen
   <img alt="license: MIT" src="_badges/license.svg">
 </div>
 
-The Go pxmysql package implements the MySQL X Protocol and provides a Go sql
-driver which uses it. The X Protocol communicates with MySQL using a different
-TCP port and transfers data using Protocol Buffers.
+The Go pxmysql package implements the MySQL X Protocol and provides a Go `sql/driver`
+which uses it. The X Protocol communicates with MySQL using TCP port 33060 (default)
+using structured data serialized using Protocol Buffers.
 
 Note that the MySQL X Protocol is an alternative, an extension of the
 conventional well known text-based MySQL protocol.  
@@ -39,10 +39,10 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/golistic/pxmysql"
+	_ "github.com/golistic/pxmysql/register"
 	
 	// or import the following to use the driver name "mysql"
-	// _ "github.com/golistic/pxmysql/mysql"
+	// _ "github.com/golistic/pxmysql/register/mysql"
 )
 
 func main() {
@@ -256,14 +256,27 @@ The `ConnectConfig`-type has the following attributes:
 ### Driver name
 
 We use the driver name "pxmysql", which needs to be used with Go's `sql.Open`.
-However, some projects require the "mysql" name, but can use this driver instead.
-Therefor, you can register "mysql" to use the `pxmysql` driver like this:
+To register the driver, you use an anonymous import as follows:
 
 ```go
 package yourstuff
 
 import (
-    _ "github.com/golistic/pxmysql/mysql"
+    _ "github.com/golistic/pxmysql/register"
+)
+```
+
+Note the extra sub-package, which is different from other drivers. We do like to
+explicitly load, and not register whenever the driver is imported.
+
+Some projects require the "mysql" name to be registered, using the driver name
+as a SQL dialect. This can be achieved by using the sub-package `register/mysql`:
+
+```go
+package yourstuff
+
+import (
+    _ "github.com/golistic/pxmysql/register/mysql"
 )
 ```
 
