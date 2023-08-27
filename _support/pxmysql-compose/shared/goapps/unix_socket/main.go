@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/golistic/pxmysql"
+	_ "github.com/golistic/pxmysql/register"
 )
 
 func main() {

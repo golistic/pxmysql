@@ -1,11 +1,9 @@
 // Copyright (c) 2022, Geert JM Vanderkelen
 
-package pxmysql
+package pxmysql_test
 
 import (
-	"context"
 	"database/sql"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"os"
@@ -14,8 +12,10 @@ import (
 	"github.com/golistic/xgo/xstrings"
 	"github.com/golistic/xgo/xt"
 
+	"github.com/golistic/pxmysql"
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/mysqlerrors"
+	"github.com/golistic/pxmysql/register"
 )
 
 func TestSQLDriver_Open(t *testing.T) {
@@ -43,7 +43,7 @@ func TestSQLDriver_Open(t *testing.T) {
 
 		for cn, dsn := range cases {
 			t.Run(cn, func(t *testing.T) {
-				drv := &Driver{}
+				drv := &pxmysql.Driver{}
 				_, err := drv.Open(dsn)
 				xt.OK(t, err)
 			})
@@ -98,14 +98,14 @@ func TestSQLDriver_Open(t *testing.T) {
 	})
 
 	t.Run("unsupported protocol", func(t *testing.T) {
-		drv := &Driver{}
+		drv := &pxmysql.Driver{}
 		_, err := drv.Open("scott:tiger@UDP(localhost)/")
 		xt.KO(t, err)
 		xt.Eq(t, "unsupported protocol 'UDP'", errors.Unwrap(err).Error())
 	})
 
 	t.Run("not enough configured with missing username", func(t *testing.T) {
-		drv := &Driver{}
+		drv := &pxmysql.Driver{}
 		_, err := drv.Open(":tiger@tcp(localhost)/")
 		xt.KO(t, err)
 		xt.Eq(t, "configuration not valid (user missing)", err.Error())
@@ -115,15 +115,15 @@ func TestSQLDriver_Open(t *testing.T) {
 
 func TestConnection_Ping(t *testing.T) {
 	t.Run("using TCP", func(t *testing.T) {
-		drv := &Driver{}
-		db, err := drv.Open(getTCPDSN())
+		db, err := sql.Open(register.DriverName, getTCPDSN())
+		defer func() { _ = db.Close() }()
 		xt.OK(t, err)
-		xt.OK(t, db.(driver.Pinger).Ping(context.Background()))
+		xt.OK(t, db.Ping())
 		xt.Eq(t, "tcp", cnxType(t, db))
 	})
 
 	t.Run("using non-existing Unix socket", func(t *testing.T) {
-		drv := &Driver{}
+		drv := &pxmysql.Driver{}
 		os.TempDir()
 		_, err := drv.Open("username:pwd@unix(_testdata/mysqlx.sock)/myschema")
 		xt.KO(t, err)

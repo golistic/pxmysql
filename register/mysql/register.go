@@ -8,6 +8,8 @@ import (
 	"github.com/golistic/pxmysql"
 )
 
+const DriverName = "mysql"
+
 func init() {
-	sql.Register("mysql", &pxmysql.Driver{})
+	sql.Register(DriverName, &pxmysql.Driver{})
 }

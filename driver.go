@@ -4,11 +4,8 @@ package pxmysql
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
 )
-
-const driverName = "pxmysql"
 
 type Driver struct{}
 
@@ -16,10 +13,6 @@ var (
 	_ driver.Driver        = &Driver{}
 	_ driver.DriverContext = &Driver{}
 )
-
-func init() {
-	sql.Register(driverName, &Driver{})
-}
 
 // Open returns a new connection to the MySQL database using MySQL X Protocol.
 func (d *Driver) Open(name string) (driver.Conn, error) {
