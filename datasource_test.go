@@ -3,130 +3,59 @@
 package pxmysql
 
 import (
-	"strings"
+	"errors"
 	"testing"
 
+	"github.com/golistic/xgo/xsql"
 	"github.com/golistic/xgo/xt"
 )
 
-func TestParseDSN(t *testing.T) {
-	t.Run("parse query string", func(t *testing.T) {
-		dsn := "scott:tiger@tcp(127.0.0.1:33060)/test?useTLS=true"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "tiger",
-			Protocol: "tcp",
-			Address:  "127.0.0.1:33060",
-			Schema:   "test",
-			UseTLS:   true,
-		}
-
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
-
-		t.Run("using String-method, query part must be included", func(t *testing.T) {
-			xt.Assert(t, strings.Contains(have.String(), "?useTLS=true"))
-		})
+func TestDataSource_IsZero(t *testing.T) {
+	t.Run("zero when username missing", func(t *testing.T) {
+		_, err := NewDataSource(":pwd@tcp(127.0.0.1)")
+		xt.KO(t, err)
+		xt.Eq(t, "user missing", errors.Unwrap(err).Error())
 	})
 
-	t.Run("no query string provided", func(t *testing.T) {
-		dsn := "scott:tiger@tcp(127.0.0.1:33060)/test"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "tiger",
-			Protocol: "tcp",
-			Address:  "127.0.0.1:33060",
-			Schema:   "test",
-			UseTLS:   false,
+	t.Run("zero when address missing", func(t *testing.T) {
+		ds := DataSource{
+			DataSource: xsql.DataSource{
+				Driver:   "pxmysql",
+				User:     "user",
+				Password: "",
+				Protocol: "tcp",
+				Address:  "",
+				Schema:   "",
+				Options:  nil,
+			},
 		}
-
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
-
-		t.Run("using String-method, with useTLS false, it is not included", func(t *testing.T) {
-			xt.Assert(t, !strings.Contains(have.String(), "?useTLS="))
-		})
+		err := ds.CheckValidity()
+		xt.KO(t, err)
+		xt.Eq(t, "address missing", err.Error())
 	})
 
-	t.Run("no default schema with query string", func(t *testing.T) {
-		var cases = map[string]string{
-			"without slash": "scott:tiger@tcp(127.0.0.1:33060)/?useTLS=true",
-			"with slash":    "scott:tiger@tcp(127.0.0.1:33060)?useTLS=true",
+	t.Run("protocol missing", func(t *testing.T) {
+		ds := DataSource{
+			DataSource: xsql.DataSource{
+				Driver:   "pxmysql",
+				User:     "user",
+				Password: "",
+				Protocol: "",
+				Address:  "127.0.0.1",
+				Schema:   "",
+				Options:  nil,
+			},
 		}
-
-		for name, dsn := range cases {
-			t.Run(name, func(t *testing.T) {
-				exp := &DataSource{
-					User:     "scott",
-					Password: "tiger",
-					Protocol: "tcp",
-					Address:  "127.0.0.1:33060",
-					Schema:   "",
-					UseTLS:   true,
-				}
-
-				have, err := ParseDSN(dsn)
-				xt.OK(t, err)
-				xt.Eq(t, exp, have)
-			})
-		}
+		err := ds.CheckValidity()
+		xt.KO(t, err)
+		xt.Eq(t, "protocol missing", err.Error())
 	})
+}
 
-	t.Run("no default schema without query string", func(t *testing.T) {
-		var cases = map[string]string{
-			"without slash": "scott:tiger@tcp(127.0.0.1:33060)/",
-			"with slash":    "scott:tiger@tcp(127.0.0.1:33060)",
-		}
-
-		for name, dsn := range cases {
-			t.Run(name, func(t *testing.T) {
-				exp := &DataSource{
-					User:     "scott",
-					Password: "tiger",
-					Protocol: "tcp",
-					Address:  "127.0.0.1:33060",
-					Schema:   "",
-					UseTLS:   false,
-				}
-
-				have, err := ParseDSN(dsn)
-				xt.OK(t, err)
-				xt.Eq(t, exp, have)
-			})
-		}
-	})
-
-	t.Run("no password", func(t *testing.T) {
-		dsn := "scott@tcp(127.0.0.1:33060)/test"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "",
-			Protocol: "tcp",
-			Address:  "127.0.0.1:33060",
-			Schema:   "test",
-			UseTLS:   false,
-		}
-
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
-	})
-
-	t.Run("unix protocol", func(t *testing.T) {
-		dsn := "scott:tiger@unix(/path/to/socket)/test"
-		exp := &DataSource{
-			User:     "scott",
-			Password: "tiger",
-			Protocol: "unix",
-			Address:  "/path/to/socket",
-			Schema:   "test",
-			UseTLS:   false,
-		}
-
-		have, err := ParseDSN(dsn)
-		xt.OK(t, err)
-		xt.Eq(t, exp, have)
+func TestNewDataSource(t *testing.T) {
+	t.Run("invalid useTLS option value", func(t *testing.T) {
+		_, err := NewDataSource("user:pwd@tcp(127.0.0.1)/?useTLS=nope")
+		xt.KO(t, err)
+		xt.Eq(t, "invalid value for useTLS option (was nope)", err.Error())
 	})
 }
