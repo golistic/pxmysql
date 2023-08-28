@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 package xmysql
 
@@ -17,7 +17,7 @@ func IsSupportedCollation[T string | uint64 | int](c T) bool {
 	var have bool
 	switch v := any(c).(type) {
 	case string:
-		_, have = collations[v]
+		_, have = Collations[v]
 	case uint64:
 		_, have = collationIDs[v]
 	case int:

@@ -18,15 +18,11 @@ func ExampleConnection_NewSession_auto_notls() {
 	}
 	config.SetPassword("pwd_user_native")
 
-	cnx, err := xmysql.NewConnection(config)
+	session, err := xmysql.CreateSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	ses, err := cnx.NewSession(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("TLS:", ses.UsesTLS())
+	fmt.Println("TLS:", session.UsesTLS())
 	// Output: TLS: false
 }
 
@@ -39,15 +35,12 @@ func ExampleConnection_NewSession_plain_withtls() {
 	}
 	config.SetPassword("pwd_user_native")
 
-	cnx, err := xmysql.NewConnection(config)
+	session, err := xmysql.CreateSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	ses, err := cnx.NewSession(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("TLS:", ses.UsesTLS())
+
+	fmt.Println("TLS:", session.UsesTLS())
 	fmt.Println("Auth Method:", config.AuthMethod)
 	// Output:
 	// TLS: true
@@ -63,18 +56,13 @@ func ExampleSession_ExecuteStatement() {
 	}
 	config.SetPassword("pwd_user_native")
 
-	cnx, err := xmysql.NewConnection(config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ses, err := cnx.NewSession(context.Background())
+	session, err := xmysql.CreateSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	q := "SELECT ?, STR_TO_DATE('2005-03-01 07:00:01', '%Y-%m-%d %H:%i:%s')"
-	res, err := ses.ExecuteStatement(context.Background(), q, "started")
+	res, err := session.ExecuteStatement(context.Background(), q, "started")
 	if err != nil {
 		log.Fatal(err)
 	}

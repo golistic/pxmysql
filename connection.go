@@ -12,7 +12,6 @@ import (
 
 type connection struct {
 	cfg     *xmysql.ConnectConfig
-	cnx     *xmysql.Connection
 	session *xmysql.Session
 }
 
@@ -63,20 +62,11 @@ func (c *connection) BeginTx(ctx context.Context, opts driver.TxOptions) (driver
 }
 
 func (c *connection) Ping(ctx context.Context) error {
-	if c.cnx == nil {
+	if c.session == nil {
 		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
 	}
 
-	if c.session != nil {
-		_, err := c.session.SessionID(ctx)
-		if err != nil {
-			return fmt.Errorf("ping failed (%w)", err)
-		}
-	}
-
-	var err error
-	c.session, err = c.cnx.NewSession(ctx)
-	if err != nil {
+	if _, err := c.session.SessionID(ctx); err != nil {
 		return fmt.Errorf("ping failed (%w)", err)
 	}
 

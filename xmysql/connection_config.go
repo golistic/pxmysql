@@ -3,7 +3,7 @@
 package xmysql
 
 import (
-	"database/sql"
+	"github.com/golistic/xgo/xstrings"
 )
 
 // ConnectConfig manages the configuration of a connection to a MySQL server.
@@ -11,7 +11,7 @@ type ConnectConfig struct {
 	Address             string
 	UnixSockAddr        string
 	Username            string
-	Password            sql.NullString
+	Password            *string
 	Schema              string
 	UseTLS              bool
 	AuthMethod          AuthMethodType
@@ -24,7 +24,7 @@ type ConnectConfig struct {
 var DefaultConnectConfig = &ConnectConfig{
 	Address:    "127.0.0.1:33060", // note that the port number is of X Plugin
 	Username:   "root",
-	Password:   sql.NullString{String: "", Valid: true},
+	Password:   xstrings.Pointer(""),
 	Schema:     "",
 	UseTLS:     false,
 	AuthMethod: AuthMethodAuto,
@@ -37,7 +37,7 @@ func (cfg *ConnectConfig) Clone() *ConnectConfig {
 		Address:             cfg.Address,
 		UnixSockAddr:        cfg.UnixSockAddr,
 		Username:            cfg.Username,
-		Password:            sql.NullString{Valid: false},
+		Password:            nil,
 		Schema:              cfg.Schema,
 		UseTLS:              cfg.UseTLS,
 		AuthMethod:          cfg.AuthMethod,
@@ -47,18 +47,14 @@ func (cfg *ConnectConfig) Clone() *ConnectConfig {
 }
 
 // SetPassword sets the password within cfg. If no password is provided,
-// the Password-field of cfg will be the SQL NULL string (sql.NullString set
-// as invalid).
+// the Password-field of cfg will be nil.
 // Panics when p has more than 1 element.
 func (cfg *ConnectConfig) SetPassword(p ...string) *ConnectConfig {
 	switch len(p) {
 	case 1:
-		cfg.Password = sql.NullString{
-			String: p[0],
-			Valid:  true,
-		}
+		cfg.Password = xstrings.Pointer(p[0])
 	case 0:
-		cfg.Password = sql.NullString{Valid: false}
+		cfg.Password = nil
 	default:
 		panic("accepting only 1 optional string")
 	}

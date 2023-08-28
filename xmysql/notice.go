@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 package xmysql
 
@@ -8,6 +8,14 @@ import (
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxnotice"
 )
 
+type stateChanges struct {
+	ClientID          uint64
+	GeneratedInsertID uint64
+	RowsAffected      uint64
+	CurrentSchema     string
+	ProducedMessage   string
+}
+
 type notices struct {
 	warnings                     []*mysqlxnotice.Warning
 	sessionVariableChanges       []*mysqlxnotice.SessionVariableChanged
@@ -15,14 +23,7 @@ type notices struct {
 	groupReplicationStateChanges []*mysqlxnotice.GroupReplicationStateChanged
 	serverHello                  *mysqlxnotice.ServerHello
 	unhandled                    []mysqlxnotice.Frame_Type
-
-	// stored session state changes attributes for easy access
-
-	clientID        uint64
-	lastInsertID    uint64
-	rowsAffected    uint64
-	currentSchema   string
-	producedMessage string
+	stateChanges                 stateChanges
 }
 
 func (n *notices) add(msg *serverMessage) error {
@@ -54,23 +55,23 @@ func (n *notices) add(msg *serverMessage) error {
 		switch m.GetParam() {
 		case mysqlxnotice.SessionStateChanged_GENERATED_INSERT_ID:
 			if len(m.Value) > 0 {
-				n.lastInsertID = m.Value[0].GetVUnsignedInt()
+				n.stateChanges.GeneratedInsertID = m.Value[0].GetVUnsignedInt()
 			}
 		case mysqlxnotice.SessionStateChanged_ROWS_AFFECTED:
 			if len(m.Value) > 0 {
-				n.rowsAffected = m.Value[0].GetVUnsignedInt()
+				n.stateChanges.RowsAffected = m.Value[0].GetVUnsignedInt()
 			}
 		case mysqlxnotice.SessionStateChanged_CURRENT_SCHEMA:
 			if len(m.Value) > 0 {
-				n.currentSchema = string(m.Value[0].VString.Value)
+				n.stateChanges.CurrentSchema = string(m.Value[0].VString.Value)
 			}
 		case mysqlxnotice.SessionStateChanged_PRODUCED_MESSAGE:
 			if len(m.Value) > 0 {
-				n.producedMessage = string(m.Value[0].VString.Value)
+				n.stateChanges.ProducedMessage = string(m.Value[0].VString.Value)
 			}
 		case mysqlxnotice.SessionStateChanged_CLIENT_ID_ASSIGNED:
 			if len(m.Value) > 0 {
-				n.clientID = m.Value[0].GetVUnsignedInt()
+				n.stateChanges.ClientID = m.Value[0].GetVUnsignedInt()
 			}
 		}
 

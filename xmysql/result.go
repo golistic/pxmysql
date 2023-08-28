@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 package xmysql
 
@@ -72,15 +72,20 @@ func (rs *Result) Warnings() []error {
 }
 
 func (rs *Result) LastInsertID() uint64 {
-	return rs.notices.lastInsertID
+	return rs.notices.stateChanges.GeneratedInsertID
 }
 
 func (rs *Result) RowsAffected() uint64 {
-	return rs.notices.rowsAffected
+	return rs.notices.stateChanges.RowsAffected
 }
 
 func (rs *Result) PreparedStatementID() uint32 {
 	return rs.stmtID
+}
+
+// StateChanges returns the object contain eventual state changes.
+func (n *Result) StateChanges() stateChanges {
+	return n.notices.stateChanges
 }
 
 // FetchRow fetches the next row for unbuffered results and stores it in Result.Row.

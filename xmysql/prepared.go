@@ -139,7 +139,7 @@ func (p *Prepared) Execute(ctx context.Context, args ...any) (*Result, error) {
 
 // Deallocate makes this prepared statement not usable any longer.
 func (p *Prepared) Deallocate(ctx context.Context) error {
-	return p.session.deallocatePrepareStatement(ctx, p.result.stmtID)
+	return p.session.DeallocatePrepareStatement(ctx, p.result.stmtID)
 }
 
 // StatementID returns the statement ID.

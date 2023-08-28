@@ -33,19 +33,13 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 		config.Address = c.dataSource.Address
 	}
 
-	cnx, err := xmysql.NewConnection(config)
-	if err != nil {
-		return nil, err
-	}
-
-	ses, err := cnx.NewSession(ctx)
+	ses, err := xmysql.CreateSession(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &connection{
 		cfg:     config,
-		cnx:     cnx,
 		session: ses,
 	}, nil
 }

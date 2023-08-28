@@ -1,6 +1,6 @@
 // Copyright (c) 2022, Geert JM Vanderkelen
 
-package xmysql
+package xmysql_test
 
 import (
 	"fmt"
