@@ -1,19 +1,36 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
-package xmysql
+package xmysql_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/golistic/xgo/xnet"
+	"github.com/golistic/xgo/xstrings"
 	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/null"
+	"github.com/golistic/pxmysql/xmysql"
+)
+
+const (
+	userNative    = "user_native"
+	userNativePwd = "pwd_user_native"
+)
+
+const (
+	userCachedSHA256    = "user_sha256"
+	userCachedSHA256Pwd = "pwd_user_sha256"
 )
 
 func mustParseDuration(s string) time.Duration {
@@ -24,20 +41,406 @@ func mustParseDuration(s string) time.Duration {
 	return d
 }
 
+func TestNewSession(t *testing.T) {
+	t.Run("password is not stored in stored config", func(t *testing.T) {
+		expConfig := &xmysql.ConnectConfig{
+			Address:  "127.0.0.1",
+			Username: "toor",
+			Password: xstrings.Pointer("secret"),
+			UseTLS:   false,
+		}
+		expConfig.SetPassword("toor")
+
+		ses, err := xmysql.NewSession(expConfig)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.Config.Password == nil)
+		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+	})
+
+	t.Run("if not given, AuthMethod is default", func(t *testing.T) {
+		expConfig := &xmysql.ConnectConfig{
+			Address:  "127.0.0.1",
+			Username: "toor",
+		}
+		expConfig.SetPassword("toor")
+
+		ses, err := xmysql.NewSession(expConfig)
+		xt.OK(t, err)
+
+		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+	})
+
+	t.Run("default configuration", func(t *testing.T) {
+		ses, err := xmysql.NewSession(nil)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.Config.Password == nil)
+		xt.Eq(t, ses.Config.Address, xmysql.DefaultConnectConfig.Address)
+		xt.Eq(t, ses.Config.Username, xmysql.DefaultConnectConfig.Username)
+		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+	})
+
+	t.Run("MySQL X Plugin is reachable", func(t *testing.T) {
+		expConfig := &xmysql.ConnectConfig{
+			Address: testContext.XPluginAddr,
+		}
+
+		ses, err := xmysql.NewSession(expConfig)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.IsReachable())
+	})
+
+	t.Run("MySQL X Plugin is not reachable", func(t *testing.T) {
+		expConfig := &xmysql.ConnectConfig{
+			Address: "127.0.0.40",
+		}
+
+		ses, err := xmysql.NewSession(expConfig)
+		xt.OK(t, err)
+
+		xt.Assert(t, !ses.IsReachable())
+	})
+
+	t.Run("address getting defaults if needed", func(t *testing.T) {
+		var cases = []struct {
+			have string
+			exp  string
+		}{
+			{have: "127.0.0.1", exp: "127.0.0.1:" + xmysql.DefaultPort},
+			{have: ":" + xmysql.DefaultPort, exp: xmysql.DefaultHost + ":" + "33060"},
+			{have: ":12453", exp: xmysql.DefaultHost + ":" + "12453"},
+			{have: "0.0.0.0:" + xmysql.DefaultPort, exp: "0.0.0.0:" + xmysql.DefaultPort},
+			{have: "", exp: xmysql.DefaultHost + ":" + xmysql.DefaultPort},
+		}
+
+		for _, c := range cases {
+			t.Run(c.exp, func(t *testing.T) {
+				ses, err := xmysql.NewSession(&xmysql.ConnectConfig{
+					Address: c.have,
+				})
+				xt.OK(t, err)
+				xt.Eq(t, c.exp, ses.Config.Address)
+			})
+		}
+	})
+
+	t.Run("valid time zone", func(t *testing.T) {
+		locName := "Europe/Berlin"
+		exp, err := time.LoadLocation(locName)
+		xt.OK(t, err)
+
+		config := &xmysql.ConnectConfig{
+			TimeZoneName: locName,
+		}
+
+		ses, err := xmysql.NewSession(config)
+		xt.OK(t, err)
+
+		xt.Eq(t, exp, ses.TimeLocation())
+	})
+
+	t.Run("invalid time zone", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			TimeZoneName: "Foo/Bar",
+		}
+
+		_, err := xmysql.NewSession(config)
+		xt.KO(t, err)
+		xt.Eq(t, "failed loading time location (unknown time zone Foo/Bar)", err.Error())
+	})
+}
+
+func TestCreateSession(t *testing.T) {
+	t.Run("connection times out", func(t *testing.T) {
+		expConfig := &xmysql.ConnectConfig{
+			Address: "127.0.0.40",
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+
+		_, err := xmysql.CreateSession(ctx, expConfig)
+		xt.KO(t, errors.Unwrap(err))
+		xt.Eq(t, "i/o timeout", errors.Unwrap(err).Error())
+	})
+
+	t.Run("hello from server and server capabilities", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Username: "user_native",
+			Address:  testContext.XPluginAddr,
+		}
+		config.SetPassword("pwd_user_native")
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.ServerCapabilities() != nil)
+		xt.Assert(t, len(ses.ServerCapabilities().AuthMechanisms) > 0)
+		// no TLS means no PLAIN
+		xt.Assert(t, !xstrings.SliceHas(ses.ServerCapabilities().AuthMechanisms, string(xmysql.AuthMethodPlain)))
+		xt.Assert(t, !ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("incorrectly connect to conventional MySQL Protocol", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address: testContext.MySQLAddr,
+		}
+
+		_, err := xmysql.CreateSession(context.Background(), config)
+		xt.KO(t, err)
+		xt.Eq(t, "wrong protocol [2005:HY000]", err.Error())
+	})
+
+	t.Run("connect to something which is not MySQL", func(t *testing.T) {
+		addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(xnet.MustGetLocalhostTCPPort()))
+		something, err := net.Listen("tcp", addr)
+		xt.OK(t, err)
+		defer func() { _ = something.Close() }()
+
+		go func() {
+			for {
+				conn, err := something.Accept()
+				xt.OK(t, err, "could not accept")
+
+				_, _ = conn.Write([]byte{0xff, 0x00, 0x00, 0x00, 0x11, 0x34})
+				_ = conn.Close()
+				break
+			}
+		}()
+
+		config := &xmysql.ConnectConfig{
+			Address: addr,
+		}
+
+		_, err = xmysql.CreateSession(context.Background(), config)
+		xt.KO(t, err)
+		xt.Eq(t, "failed reading message payload (unexpected EOF)", err.Error())
+	})
+
+	t.Run("use TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:  testContext.XPluginAddr,
+			UseTLS:   true,
+			Username: userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.ServerCapabilities() != nil)
+		xt.Assert(t, len(ses.ServerCapabilities().AuthMechanisms) > 0)
+		xt.Assert(t, xstrings.SliceHas(ses.ServerCapabilities().AuthMechanisms, string(xmysql.AuthMethodPlain)))
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("use TLS with MySQL Server CA Certificate", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:             testContext.XPluginAddr,
+			UseTLS:              true,
+			Username:            userNative,
+			TLSServerCACertPath: "_testdata/mysql_ca.pem",
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.ServerCapabilities() != nil)
+		xt.Assert(t, len(ses.ServerCapabilities().AuthMechanisms) > 0)
+		xt.Assert(t, xstrings.SliceHas(ses.ServerCapabilities().AuthMechanisms, string(xmysql.AuthMethodPlain)))
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("use TLS with MySQL Server CA Certificate using environment", func(t *testing.T) {
+		xt.OK(t, os.Setenv("xmysql_CA_CERT", "_testdata/mysql_ca.pem"))
+		defer func() {
+			_ = os.Unsetenv("xmysql_CA_CERT")
+		}()
+
+		config := &xmysql.ConnectConfig{
+			Address:  testContext.XPluginAddr,
+			UseTLS:   true,
+			Username: userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		xt.Assert(t, ses.ServerCapabilities() != nil)
+		xt.Assert(t, len(ses.ServerCapabilities().AuthMechanisms) > 0)
+		xt.Assert(t, xstrings.SliceHas(ses.ServerCapabilities().AuthMechanisms, string(xmysql.AuthMethodPlain)))
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("cannot use PLAIN authn method without TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:    testContext.XPluginAddr,
+			UseTLS:     false,
+			AuthMethod: xmysql.AuthMethodPlain,
+			Username:   userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		_, err := xmysql.CreateSession(context.Background(), config)
+		xt.KO(t, err)
+		xt.Assert(t, strings.Contains(err.Error(), "plain text authentication only supported over TLS"))
+	})
+
+	t.Run("can use MYSQL41 authn method without TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:    testContext.XPluginAddr,
+			UseTLS:     false,
+			AuthMethod: xmysql.AuthMethodMySQL41,
+			Username:   userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+		xt.Eq(t, xmysql.AuthMethodMySQL41, ses.AuthMethod())
+	})
+
+	t.Run("can use MYSQL41 authn method with TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:    testContext.XPluginAddr,
+			UseTLS:     true,
+			AuthMethod: xmysql.AuthMethodMySQL41,
+			Username:   userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+		xt.Eq(t, xmysql.AuthMethodMySQL41, ses.AuthMethod())
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("can use PLAIN authn method with TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:    testContext.XPluginAddr,
+			UseTLS:     true,
+			AuthMethod: xmysql.AuthMethodPlain,
+			Username:   userNative,
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+		xt.Eq(t, xmysql.AuthMethodPlain, ses.AuthMethod())
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("can use AUTO authn method with TLS", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:    testContext.XPluginAddr,
+			UseTLS:     true,
+			AuthMethod: xmysql.AuthMethodAuto,
+			Username:   userCachedSHA256,
+		}
+		config.SetPassword(userCachedSHA256Pwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+		defer func() { xt.OK(t, ses.Close()) }()
+
+		xt.Eq(t, xmysql.AuthMethodPlain, ses.AuthMethod()) // AUTO will try plain first, if TLS is enabled
+		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
+		xt.Assert(t, ses.ServerCapabilities().TLS)
+	})
+
+	t.Run("SHA256 caching after plain authentication using TLS", func(t *testing.T) {
+		xt.OK(t, testContext.Server.FlushPrivileges())
+		password := userCachedSHA256Pwd
+		username := userCachedSHA256
+
+		config := (&xmysql.ConnectConfig{
+			Address: testContext.XPluginAddr,
+			UseTLS:  true,
+			// AUTO AuthMethod is default which uses PLAIN
+			Username: username,
+		}).SetPassword(password)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+		defer func() { xt.OK(t, ses.Close()) }()
+
+		t.Run("use SHA256_MEMORY now works without TLS", func(t *testing.T) {
+			config := &xmysql.ConnectConfig{
+				Address:    testContext.XPluginAddr,
+				UseTLS:     false,
+				AuthMethod: xmysql.AuthMethodSHA256Memory, // force
+				Username:   username,
+			}
+			config.SetPassword(password)
+
+			ses, err := xmysql.CreateSession(context.Background(), config)
+			xt.OK(t, err)
+			defer func() { xt.OK(t, ses.Close()) }()
+
+			xt.Eq(t, xmysql.AuthMethodSHA256Memory, ses.AuthMethod())
+			xt.Assert(t, !ses.UsesTLS(), "expected no tls.Conn")
+
+			t.Run("again, but now with AUTO", func(t *testing.T) {
+				config := &xmysql.ConnectConfig{
+					Address:    testContext.XPluginAddr,
+					AuthMethod: xmysql.AuthMethodAuto,
+					Username:   username,
+				}
+				config.SetPassword(password)
+
+				ses, err := xmysql.CreateSession(context.Background(), config)
+				xt.OK(t, err)
+				defer func() { xt.OK(t, ses.Close()) }()
+
+				xt.Eq(t, xmysql.AuthMethodSHA256Memory, ses.AuthMethod())
+				xt.Assert(t, !ses.UsesTLS(), "expected no tls.Conn")
+			})
+		})
+	})
+
+	t.Run("session uses connection time location", func(t *testing.T) {
+		locName := "Europe/Berlin"
+		exp, err := time.LoadLocation(locName)
+		xt.OK(t, err)
+
+		config := &xmysql.ConnectConfig{
+			Address:      testContext.XPluginAddr,
+			UseTLS:       true,
+			Username:     userNative,
+			TimeZoneName: "Europe/Berlin",
+		}
+		config.SetPassword(userNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		sesZone, err := ses.TimeZone(context.Background())
+		xt.OK(t, err)
+
+		xt.Eq(t, exp, sesZone)
+	})
+}
+
 func TestSession_ExecuteStatement(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
 	t.Run("numeric data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_numeric"))
 
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
@@ -135,13 +538,15 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("datetime data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_datetime"))
 
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
 
 		locCET, err := time.LoadLocation("CET")
 		xt.OK(t, err)
+
+		loc := ses.TimeLocation()
 
 		exp := map[int64]struct {
 			dtDATE       time.Time
@@ -152,26 +557,26 @@ func TestSession_ExecuteStatement(t *testing.T) {
 			timeLocation *time.Location
 		}{
 			1: {
-				dtDATE:       time.Date(2005, 3, 1, 0, 0, 0, 0, ses.timeLocation),
+				dtDATE:       time.Date(2005, 3, 1, 0, 0, 0, 0, loc),
 				dtTIME:       mustParseDuration("8h0m1.123456s"),
-				dtDATETIME:   time.Date(2005, 3, 1, 7, 0, 1, 0, ses.timeLocation),
+				dtDATETIME:   time.Date(2005, 3, 1, 7, 0, 1, 0, loc),
 				dtTIMESTAMP:  time.Date(2005, 3, 1, 8, 0, 1, 0, locCET),
 				dtYear:       2005,
 				timeLocation: locCET,
 			},
 			2: {
-				dtDATE:       time.Date(9999, 12, 31, 0, 0, 0, 0, ses.timeLocation),
+				dtDATE:       time.Date(9999, 12, 31, 0, 0, 0, 0, loc),
 				dtTIME:       mustParseDuration("838h59m59s"),
-				dtDATETIME:   time.Date(9999, 12, 31, 23, 59, 59, 999999000, ses.timeLocation),
-				dtTIMESTAMP:  time.Date(2038, 1, 19, 3, 14, 7, 0, ses.timeLocation),
+				dtDATETIME:   time.Date(9999, 12, 31, 23, 59, 59, 999999000, loc),
+				dtTIMESTAMP:  time.Date(2038, 1, 19, 3, 14, 7, 0, loc),
 				dtYear:       1901,
 				timeLocation: time.UTC,
 			},
 			3: {
-				dtDATE:       time.Date(1000, 1, 1, 0, 0, 0, 0, ses.timeLocation),
+				dtDATE:       time.Date(1000, 1, 1, 0, 0, 0, 0, loc),
 				dtTIME:       mustParseDuration("-838h59m59s"),
-				dtDATETIME:   time.Date(1000, 1, 1, 0, 0, 0, 0, ses.timeLocation),
-				dtTIMESTAMP:  time.Date(1970, 1, 1, 0, 0, 1, 0, ses.timeLocation),
+				dtDATETIME:   time.Date(1000, 1, 1, 0, 0, 0, 0, loc),
+				dtTIMESTAMP:  time.Date(1970, 1, 1, 0, 0, 1, 0, loc),
 				dtYear:       1901,
 				timeLocation: time.UTC,
 			},
@@ -197,7 +602,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("string data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_string"))
 
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
@@ -231,7 +636,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 			id := row.Values[0].(int64)
 
 			t.Run(fmt.Sprintf("row=%d", id), func(t *testing.T) {
-				xt.Assert(t, IsSupportedCollation(res.Columns[1].GetCollation()))
+				xt.Assert(t, xmysql.IsSupportedCollation(res.Columns[1].GetCollation()))
 				xt.Eq(t, exp[id].sChar, row.Values[1].(string))
 				xt.Eq(t, exp[id].sVarchar, row.Values[2].(string))
 				xt.Eq(t, exp[id].sBinary, row.Values[3].([]byte))
@@ -247,7 +652,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("execute INSERT", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "inserting.sql"))
 
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
@@ -256,7 +661,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 			"INSERT INTO inserts01 (c1) VALUES ('1'),('2')")
 		xt.OK(t, err)
 
-		xt.Eq(t, "Records: 2  Duplicates: 0  Warnings: 0", res.notices.producedMessage)
+		xt.Eq(t, "Records: 2  Duplicates: 0  Warnings: 0", res.StateChanges().ProducedMessage)
 		xt.Eq(t, 2, res.RowsAffected())
 		xt.Eq(t, 1, res.LastInsertID()) // first generated is returned with multiple values
 
@@ -268,7 +673,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	})
 
 	t.Run("use arguments and placeholders", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		res, err := ses.ExecuteStatement(context.Background(), "SELECT ?, ?, '?', ? from dual", 1, "one", 3)
@@ -282,7 +687,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	})
 
 	t.Run("zero hour timestamp", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		res, err := ses.ExecuteStatement(context.Background(),
@@ -297,17 +702,14 @@ func TestSession_ExecuteStatement(t *testing.T) {
 
 func TestSession_CurrentSchema(t *testing.T) {
 	t.Run("configure schema and get current schema name", func(t *testing.T) {
-		config := &ConnectConfig{
+		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
 			Username: userNative,
 			Schema:   testSchema,
 		}
 		config.SetPassword(userNativePwd)
 
-		cnx, err := NewConnection(config)
-		xt.OK(t, err)
-
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schema, err := ses.CurrentSchema(context.Background())
@@ -316,16 +718,13 @@ func TestSession_CurrentSchema(t *testing.T) {
 	})
 
 	t.Run("no current schema in configuration means empty schema name", func(t *testing.T) {
-		config := &ConnectConfig{
+		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
 			Username: userNative,
 		}
 		config.SetPassword(userNativePwd)
 
-		cnx, err := NewConnection(config)
-		xt.OK(t, err)
-
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schema, err := ses.CurrentSchema(context.Background())
@@ -335,21 +734,18 @@ func TestSession_CurrentSchema(t *testing.T) {
 }
 
 func TestSession_SetTimeZone(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
-
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
 
 	locName := "America/Los_Angeles"
 	locUSALA, err := time.LoadLocation(locName)
 	xt.OK(t, err)
 
 	t.Run("default UTC when no time zone is set", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		// without time location set, timestamps returned by MySQL are UTC
@@ -365,7 +761,7 @@ func TestSession_SetTimeZone(t *testing.T) {
 	})
 
 	t.Run("set time zone for session", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		// set time location for session
@@ -386,20 +782,17 @@ func TestSession_SetTimeZone(t *testing.T) {
 }
 
 func TestSession_SetCollation(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
 	t.Run("set collation and retrieve", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		exp := collations["utf8mb4_sinhala_ci"]
+		exp := xmysql.Collations["utf8mb4_sinhala_ci"]
 		xt.OK(t, ses.SetCollation(context.Background(), "utf8mb4_sinhala_ci"))
 		have, err := ses.Collation(context.Background())
 		xt.OK(t, err)
@@ -408,7 +801,7 @@ func TestSession_SetCollation(t *testing.T) {
 	})
 
 	t.Run("set invalid collation", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
 		c := "big5_chinese_ci"
@@ -419,16 +812,13 @@ func TestSession_SetCollation(t *testing.T) {
 }
 
 func TestSession_PrepareStatement(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
-	ses, err := cnx.NewSession(context.Background())
+	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
 
 	stmt := "SELECT SQRT(POW(?,2) + POW(?,2)) AS hypotenuse"
@@ -443,16 +833,13 @@ func TestSession_PrepareStatement(t *testing.T) {
 }
 
 func TestSession_DeallocatePrepareStatement(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
-	ses, err := cnx.NewSession(context.Background())
+	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
 
 	t.Run("successfully deallocate", func(t *testing.T) {
@@ -460,10 +847,10 @@ func TestSession_DeallocatePrepareStatement(t *testing.T) {
 		prep, err := ses.PrepareStatement(context.Background(), stmt)
 		xt.OK(t, err)
 
-		_, err = prep.Execute(context.Background(), 3)
+		res, err := prep.Execute(context.Background(), 3)
 		xt.OK(t, err)
 
-		xt.OK(t, ses.deallocatePrepareStatement(context.Background(), prep.result.stmtID))
+		xt.OK(t, ses.DeallocatePrepareStatement(context.Background(), res.PreparedStatementID()))
 
 		_, err = prep.Execute(context.Background(), 3)
 		xxt.AssertMySQLError(t, err, 5110)

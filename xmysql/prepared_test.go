@@ -1,6 +1,6 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
-package xmysql
+package xmysql_test
 
 import (
 	"context"
@@ -17,12 +17,13 @@ import (
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/mysqlerrors"
 	"github.com/golistic/pxmysql/null"
+	"github.com/golistic/pxmysql/xmysql"
 )
 
 func TestPrepared_Execute(t *testing.T) {
 	xt.OK(t, testContext.Server.LoadSQLScript("prepared_stmt"))
 
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:      testContext.XPluginAddr,
 		Username:     userNative,
 		Schema:       testSchema,
@@ -30,10 +31,7 @@ func TestPrepared_Execute(t *testing.T) {
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
-	ses, err := cnx.NewSession(context.Background())
+	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
 
 	t.Run("all supported Go types", func(t *testing.T) {
@@ -301,7 +299,7 @@ func TestPrepared_Execute(t *testing.T) {
 		res, err = prepSelect.Execute(context.Background(), lastInsertID)
 		xt.OK(t, err)
 
-		vTimeLoc := vTime.In(ses.timeLocation)
+		vTimeLoc := vTime.In(ses.TimeLocation())
 
 		xt.Eq(t, 1, len(res.Rows))
 		row := res.Rows[0].Values
@@ -346,7 +344,7 @@ func TestPrepared_Execute(t *testing.T) {
 			res, err = prepSelect.Execute(context.Background(), lastInsertID)
 			xt.OK(t, err)
 
-			vTimeLoc := vTime.In(ses.timeLocation)
+			vTimeLoc := vTime.In(ses.TimeLocation())
 
 			xt.Eq(t, 1, len(res.Rows))
 			row := res.Rows[0].Values

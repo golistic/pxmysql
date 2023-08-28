@@ -1,6 +1,6 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
-package xmysql
+package xmysql_test
 
 import (
 	"context"
@@ -11,21 +11,19 @@ import (
 	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/internal/xxt"
+	"github.com/golistic/pxmysql/xmysql"
 )
 
 func TestResult_FetchRow(t *testing.T) {
-	config := &ConnectConfig{
+	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
 		Username: userNative,
 	}
 	config.SetPassword(userNativePwd)
 
-	cnx, err := NewConnection(config)
-	xt.OK(t, err)
-
 	tbl := "bulk_fidiEfiS223"
 
-	ses, err := cnx.NewSession(context.Background())
+	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
 	xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
 
@@ -46,7 +44,7 @@ func TestResult_FetchRow(t *testing.T) {
 	}
 
 	t.Run("fetch", func(t *testing.T) {
-		ses, err := cnx.NewSession(context.Background())
+		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
 

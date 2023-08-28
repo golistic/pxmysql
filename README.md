@@ -132,33 +132,28 @@ The following example uses a user which has its authentication plugin set as
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
+  "context"
+  "fmt"
+  "log"
 
-	"github.com/golistic/pxmysql/xmysql"
+  "github.com/golistic/pxmysql/xmysql"
 )
 
 func main() {
-	pwd := "tiger"
-	config := &xmysql.ConnectConfig{
-		Address:    "127.0.0.1:33060", // default X Plugin port
-		AuthMethod: xmysql.AuthMethodMySQL41,
-		Username:   "scott",
-		Password:   &pwd,
-	}
+  pwd := "tiger"
+  config := &xmysql.ConnectConfig{
+    Address:    "127.0.0.1:33060", // default X Plugin port
+    AuthMethod: xmysql.AuthMethodMySQL41,
+    Username:   "scott",
+    Password:   &pwd,
+  }
 
-	cnx, err := xmysql.NewConnection(config)
-	if err != nil {
-		log.Fatal(err)
-	}
+  session, err := xmysql.CreateSession(context.Background(), config)
+  if err != nil {
+    log.Fatal(err)
+  }
 
-	ses, err := cnx.NewSession(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Session", ses)
+  fmt.Println("Session", session)
 }
 ```
 
@@ -168,17 +163,19 @@ In the following snippet we select a string and a timestamp:
 package main
 
 import (
-	"time"
-	"github.com/golistic/pxmysql/xmysql"
+  "time"
+
+  "github.com/golistic/pxmysql/xmysql"
 )
 
 // result of query: "SELECT 'now', NOW()" 
 func handleResult(res *xmysql.ResultResult) {
-	for _, row := range res.Rows {
-		_ = row[0].(string)
-		_ = row[1].(time.Time)
-	}
+  for _, row := range res.Rows {
+    _ = row[0].(string)
+    _ = row[1].(time.Time)
+  }
 }
+
 ```
 
 MySQL Types to Go
@@ -384,10 +381,10 @@ About The Author
 ----------------
 
 Geert Vanderkelen worked for about 13 years at MySQL AB/MySQL Inc/Sun/Oracle
-as Support Engineer and Developer. He is the original other of MySQL Connector/Python
+as Support Engineer and Developer. He is the original author of MySQL Connector/Python
 (which started as a hobby project), and MySQL Router. Today, Geert implements
 backend services and more using primarily Go/GraphQL, and advocates the
-goodness of MySQL and friends.
+goodness of MySQL and its relational kin.
 
 License
 -------

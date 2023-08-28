@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2022, 2023, Geert JM Vanderkelen
 
 package xmysql
 
@@ -9,7 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -26,32 +29,105 @@ import (
 	"github.com/golistic/pxmysql/null"
 )
 
+const DefaultPort = "33060"
+const DefaultHost = "127.0.0.1"
+
 // Session uses the Connection configuration to set up a session with
 // the MySQL server through the X Plugin. When a session is instantiated
 // the authentication start, connection is switched to TLS (if needed).
 // All interaction with the server is through this the session.
 type Session struct {
+	Config             ConnectConfig
 	id                 int
 	mysqlVersion       string
-	cnx                *Connection
 	conn               net.Conn
 	serverCapabilities *ServerCapabilities
 	usedAuthMethod     AuthMethodType
-	timeLocation       *time.Location
 	maxAllowedPacket   int
-
-	preparedStmtCount uint32
+	preparedStmtCount  uint32
+	password           string
+	timeLocation       *time.Location
 }
 
-func newSession(ctx context.Context, cnx *Connection) (*Session, error) {
-	ses := &Session{
-		cnx:          cnx,
-		conn:         nil,
-		timeLocation: cnx.timeLocation,
+// CreateSession instantiates a new session object connecting with given config and
+// opens the connection.
+func CreateSession(ctx context.Context, config *ConnectConfig) (*Session, error) {
+	ses, err := NewSession(config)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := ses.open(ctx); err != nil {
+	if err := ses.Open(ctx); err != nil {
 		return nil, err
+	}
+
+	return ses, nil
+}
+
+// NewSession instantiates a new session object connecting with given config but
+// does not Open the connection.
+func NewSession(config *ConnectConfig) (*Session, error) {
+	if config == nil {
+		config = DefaultConnectConfig.Clone()
+	}
+
+	cfg := *config
+	var password string
+	if cfg.Password != nil {
+		password = *cfg.Password
+	}
+	cfg.Password = nil
+
+	ses := &Session{
+		password:     password,
+		Config:       cfg,
+		conn:         nil,
+		timeLocation: defaultTimeLocation,
+	}
+
+	if ses.Config.UnixSockAddr != "" {
+		f, err := filepath.Abs(ses.Config.UnixSockAddr)
+		if err == nil {
+			var stat os.FileInfo
+			stat, err = os.Stat(f)
+			if err == nil {
+				if stat.Mode().Type() != fs.ModeSocket {
+					err = fmt.Errorf("not Unix domain socket")
+				}
+			}
+		}
+
+		if err != nil {
+			return nil, mysqlerrors.New(mysqlerrors.ClientBadUnixSocket, ses.Config.UnixSockAddr, errors.Unwrap(err))
+		}
+		ses.Config.UnixSockAddr = f
+	} else {
+		h, p, err := net.SplitHostPort(ses.Config.Address)
+		var addrErr *net.AddrError
+		if errors.As(err, &addrErr) {
+			h = ses.Config.Address // on error h is empty
+			p = DefaultPort
+		}
+		if h == "" {
+			h = DefaultHost
+		}
+		ses.Config.Address = net.JoinHostPort(h, p)
+	}
+
+	if ses.Config.AuthMethod == "" {
+		ses.Config.AuthMethod = DefaultConnectConfig.AuthMethod
+	} else {
+		if !supportedAuthMethods.Has(ses.Config.AuthMethod) {
+			return nil, fmt.Errorf("unsupported authentication type '%s'", ses.Config.AuthMethod)
+		}
+	}
+
+	if ses.Config.TimeZoneName != "" {
+		l, err := time.LoadLocation(ses.Config.TimeZoneName)
+		if err != nil {
+			return nil, fmt.Errorf("failed loading time location (%w)", err)
+		}
+		ses.timeLocation = l
 	}
 
 	return ses, nil
@@ -63,6 +139,26 @@ func (ses *Session) String() string {
 		state = fmt.Sprintf("id=%d", id)
 	}
 	return fmt.Sprintf("<Session:%s>", state)
+}
+
+func (ses *Session) TimeLocation() *time.Location {
+	return ses.timeLocation
+}
+
+// IsReachable returns whether the configured MySQL instance is available.
+func (ses *Session) IsReachable() bool {
+	c, _ := net.DialTimeout("tcp", ses.Config.Address, time.Second)
+	if c != nil {
+		_ = c.Close()
+		return true
+	}
+
+	return false
+}
+
+// ServerCapabilities returns the capabilities of the server.
+func (ses *Session) ServerCapabilities() *ServerCapabilities {
+	return ses.serverCapabilities
 }
 
 // Close closes this session.
@@ -156,7 +252,7 @@ func (ses *Session) PrepareStatement(ctx context.Context, statement string) (*Pr
 	}, nil
 }
 
-func (ses *Session) deallocatePrepareStatement(ctx context.Context, stmtID uint32) error {
+func (ses *Session) DeallocatePrepareStatement(ctx context.Context, stmtID uint32) error {
 	if err := write(ctx, ses, &mysqlxprepare.Deallocate{
 		StmtId: &stmtID,
 	}); err != nil {
@@ -195,7 +291,7 @@ func (ses *Session) CurrentSchema(ctx context.Context) (string, error) {
 }
 
 func (ses *Session) SetCollation(ctx context.Context, name string) error {
-	c, ok := collations[name]
+	c, ok := Collations[name]
 	if !ok {
 		return fmt.Errorf("failed setting collation ('%s' unsupported)", name)
 	}
@@ -223,7 +319,7 @@ func (ses *Session) Collation(ctx context.Context) (*Collation, error) {
 	if !name.Valid {
 		return nil, fmt.Errorf("failed getting collation of connection (name was invalid)")
 	}
-	c, ok := collations[name.String]
+	c, ok := Collations[name.String]
 	if !ok {
 		v := res.Rows[0].Values[1].(null.String)
 		return nil, fmt.Errorf("failed getting collation of connection (unsupported '%s'; MySQL v%s)",
@@ -283,15 +379,17 @@ func (ses *Session) SessionID(ctx context.Context) (int, error) {
 	return int(res.Rows[0].Values[0].(uint64)), nil
 }
 
-func (ses *Session) open(ctx context.Context) error {
+// Open opens the connection to the MySQL server. This method is called by
+// CreateSession, but not NewSession.
+func (ses *Session) Open(ctx context.Context) error {
 	var err error
 
 	network := "tcp"
-	address := ses.cnx.config.Address
+	address := ses.Config.Address
 	errCode := mysqlerrors.ClientBadTCPSocket
-	if ses.cnx.config.UnixSockAddr != "" {
+	if ses.Config.UnixSockAddr != "" {
 		network = "unix"
-		address = ses.cnx.config.UnixSockAddr
+		address = ses.Config.UnixSockAddr
 		errCode = mysqlerrors.ClientBadUnixSocket
 	}
 
@@ -352,7 +450,7 @@ func (ses *Session) open(ctx context.Context) error {
 }
 
 func (ses *Session) negotiate(ctx context.Context) error {
-	if ses.cnx.config.UseTLS {
+	if ses.Config.UseTLS {
 		if err := write(ctx, ses, &mysqlxconnection.CapabilitiesSet{
 			Capabilities: &mysqlxconnection.Capabilities{
 				Capabilities: []*mysqlxconnection.Capability{{
@@ -373,14 +471,14 @@ func (ses *Session) negotiate(ctx context.Context) error {
 
 		// if TLS is supported, we got an OK, and we do the TLS handshake
 		var tlsConfig *tls.Config
-		if ses.cnx.config.TLSServerCACertPath != "" {
-			if err := addServerCACertFromFile(ses.cnx.config.TLSServerCACertPath); err != nil {
+		if ses.Config.TLSServerCACertPath != "" {
+			if err := addServerCACertFromFile(ses.Config.TLSServerCACertPath); err != nil {
 				return err
 			}
 			tlsConfig = &tls.Config{
 				InsecureSkipVerify: false, // explicit to make clear
 				RootCAs:            serverCAPool,
-				ServerName:         ses.cnx.serverHostname(),
+				ServerName:         ses.serverHostname(),
 			}
 		} else {
 			tlsConfig = &tls.Config{
@@ -405,7 +503,7 @@ func (ses *Session) authenticate(ctx context.Context) error {
 	_, tlsOK := ses.conn.(*tls.Conn)
 
 	var authMethods []AuthMethodType
-	if ses.cnx.config.AuthMethod == AuthMethodAuto {
+	if ses.Config.AuthMethod == AuthMethodAuto {
 		if ses.serverCapabilities != nil && ses.serverCapabilities.TLS {
 			authMethods = append(authMethods, AuthMethodPlain)
 		}
@@ -413,7 +511,7 @@ func (ses *Session) authenticate(ctx context.Context) error {
 	} else if ses.usedAuthMethod == AuthMethodPlain && !tlsOK {
 		return fmt.Errorf("plain text authentication only supported over TLS")
 	} else {
-		authMethods = []AuthMethodType{ses.cnx.config.AuthMethod}
+		authMethods = []AuthMethodType{ses.Config.AuthMethod}
 	}
 
 	var authErr error
@@ -465,10 +563,10 @@ func (ses *Session) authenticateWith(ctx context.Context, method AuthMethodType)
 	}
 
 	authData, err := authDataFunc(authn{
-		username:  ses.cnx.config.Username,
-		password:  ses.cnx.password,
+		username:  ses.Config.Username,
+		password:  ses.password,
 		challenge: res.authChallenge,
-		schema:    ses.cnx.config.Schema,
+		schema:    ses.Config.Schema,
 	})
 	if err != nil {
 		return false, err
@@ -492,9 +590,9 @@ func (ses *Session) authenticatePlain(ctx context.Context) (bool, error) {
 	}
 
 	authData, err := authMySQLPlain(authn{
-		username: ses.cnx.config.Username,
-		password: ses.cnx.password,
-		schema:   ses.cnx.config.Schema,
+		username: ses.Config.Username,
+		password: ses.password,
+		schema:   ses.Config.Schema,
 	})
 	if err != nil {
 		return false, err
@@ -637,4 +735,9 @@ func (ses *Session) handleResult(ctx context.Context, doneWhen doneWhenFunc) (*R
 	}
 
 	return result, nil
+}
+
+func (ses *Session) serverHostname() string {
+	host, _, _ := net.SplitHostPort(ses.Config.Address) // error ignored; just return empty if not available
+	return host
 }
