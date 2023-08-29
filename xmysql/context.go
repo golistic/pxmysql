@@ -11,7 +11,7 @@ type CtxKey struct{}
 
 var CtxTimeLocation = &CtxKey{}
 
-var defaultTimeLocation = time.UTC
+var DefaultTimeLocation = time.UTC
 
 // SetContextTimeLocation sets the time location used when decoding MySQL DATETIME and
 // TIMESTAMP to Go `time.Time` objects. If l is nil, it is unset, and default will
@@ -30,5 +30,5 @@ func ContextTimeLocation(ctx context.Context) *time.Location {
 		}
 	}
 
-	return defaultTimeLocation
+	return DefaultTimeLocation
 }

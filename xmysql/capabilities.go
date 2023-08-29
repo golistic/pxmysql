@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxconnection"
+	"github.com/golistic/pxmysql/xmysql/internal/network"
 )
 
 // ServerCapabilities holds the capabilities returned by the server.
@@ -16,7 +17,7 @@ type ServerCapabilities struct {
 
 // NewServerCapabilitiesFromMessage instantiates a new ServerCapabilities object
 // using a message returned by MySQL Server's X Plugin.
-func NewServerCapabilitiesFromMessage(msg *serverMessage) (*ServerCapabilities, error) {
+func NewServerCapabilitiesFromMessage(msg *network.ServerMessage) (*ServerCapabilities, error) {
 	capabilities := &mysqlxconnection.Capabilities{}
 	if err := msg.Unmarshall(capabilities); err != nil {
 		return nil, fmt.Errorf("message was not mysqlxconnection.Capabilities")

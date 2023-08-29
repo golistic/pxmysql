@@ -1,11 +1,13 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package statements_test
 
 import (
 	"testing"
 
 	"github.com/golistic/xgo/xt"
+
+	"github.com/golistic/pxmysql/xmysql/internal/statements"
 )
 
 func TestPlaceholderIndexes(t *testing.T) {
@@ -34,7 +36,7 @@ func TestPlaceholderIndexes(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			xt.Eq(t, c.exp, placeholderIndexes(stmtPlaceholder, c.stmt))
+			xt.Eq(t, c.exp, statements.PlaceholderIndexes(statements.Placeholder, c.stmt))
 		})
 	}
 }

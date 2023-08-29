@@ -1,17 +1,14 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package network
 
 import (
-	"context"
 	"database/sql/driver"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
-	"syscall"
 
 	"google.golang.org/protobuf/proto"
 
@@ -24,12 +21,12 @@ import (
 	"github.com/golistic/pxmysql/mysqlerrors"
 )
 
-type serverMessage struct {
+type ServerMessage struct {
 	msgType int
 	payload []byte
 }
 
-var _ interfaces.ServerMessager = &serverMessage{}
+var _ interfaces.ServerMessager = &ServerMessage{}
 
 var maxServerMessageType int32
 
@@ -41,7 +38,7 @@ func init() {
 	}
 }
 
-func (m *serverMessage) Unmarshall(into proto.Message) error {
+func (m *ServerMessage) Unmarshall(into proto.Message) error {
 	if err := UnmarshalPartial(m.payload, into); err != nil {
 		return fmt.Errorf("failed unmarshalling server message type %s (%w)",
 			mysqlx.ServerMessages_Type(m.msgType).String(), err)
@@ -49,11 +46,11 @@ func (m *serverMessage) Unmarshall(into proto.Message) error {
 	return nil
 }
 
-func (m *serverMessage) ServerMessageType() mysqlx.ServerMessages_Type {
+func (m *ServerMessage) ServerMessageType() mysqlx.ServerMessages_Type {
 	return mysqlx.ServerMessages_Type(m.msgType)
 }
 
-func readMessage(r io.Reader) (*serverMessage, error) {
+func readMessage(r io.Reader) (*ServerMessage, error) {
 	var header [5]byte
 	if n, err := io.ReadFull(r, header[:]); err != nil {
 		if errors.Is(err, os.ErrDeadlineExceeded) {
@@ -69,7 +66,7 @@ func readMessage(r io.Reader) (*serverMessage, error) {
 		return nil, mysqlerrors.New(2007)
 	}
 
-	msg := &serverMessage{
+	msg := &ServerMessage{
 		msgType: int(header[4]),
 	}
 
@@ -115,71 +112,4 @@ func clientMessageType(msg proto.Message) (mysqlx.ClientMessages_Type, error) {
 	default:
 		return 0, fmt.Errorf("unsupported message '%T'", msg)
 	}
-}
-
-func write(ctx context.Context, session *Session, msg proto.Message) error {
-	if session == nil || session.conn == nil {
-		return fmt.Errorf("not connected (%w)", driver.ErrBadConn)
-	}
-
-	msgType, err := clientMessageType(msg)
-	if err != nil {
-		return err
-	}
-
-	deadline, _ := ctx.Deadline()
-	if err := session.conn.SetWriteDeadline(deadline); err != nil {
-		return fmt.Errorf("failed setting write deadline (%w)", err)
-	}
-
-	b, err := proto.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed marshalling protobuf message (%w)", err)
-	}
-
-	if session.maxAllowedPacket > 0 && len(b) > session.maxAllowedPacket {
-		return mysqlerrors.New(mysqlerrors.ClientNetPacketTooLarge)
-	}
-
-	var header [5]byte
-	binary.LittleEndian.PutUint32(header[:], uint32(len(b))+1) // +1 is final \x00
-
-	header[4] = byte(msgType)
-
-	buf := &net.Buffers{header[:], b}
-	_, err = buf.WriteTo(session.conn)
-	switch {
-	case errors.Is(err, syscall.EPIPE):
-		return fmt.Errorf("broken pipe when writing (%w)", driver.ErrBadConn)
-	case err != nil:
-		return fmt.Errorf("failed sending message (%w)", err)
-	}
-
-	trace("w", msg)
-
-	return nil
-}
-
-func read(ctx context.Context, conn net.Conn) (*serverMessage, error) {
-	deadline, _ := ctx.Deadline()
-
-	if err := conn.SetReadDeadline(deadline); err != nil {
-		return nil, fmt.Errorf("failed setting read deadline (%w)", err)
-	}
-
-	msg, err := readMessage(conn)
-	if err != nil {
-		if err == io.EOF {
-			return nil, io.EOF
-		} else if _, ok := err.(*mysqlerrors.Error); ok {
-			return nil, err
-		}
-
-		return nil, err
-	}
-
-	trace("r", msg)
-
-	return msg, nil
-
 }

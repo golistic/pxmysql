@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
 package xmysql_test
 
@@ -21,16 +21,6 @@ import (
 	"github.com/golistic/pxmysql/internal/xxt"
 	"github.com/golistic/pxmysql/null"
 	"github.com/golistic/pxmysql/xmysql"
-)
-
-const (
-	userNative    = "user_native"
-	userNativePwd = "pwd_user_native"
-)
-
-const (
-	userCachedSHA256    = "user_sha256"
-	userCachedSHA256Pwd = "pwd_user_sha256"
 )
 
 func mustParseDuration(s string) time.Duration {
@@ -223,9 +213,9 @@ func TestCreateSession(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
 			UseTLS:   true,
-			Username: userNative,
+			Username: xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -241,10 +231,10 @@ func TestCreateSession(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:             testContext.XPluginAddr,
 			UseTLS:              true,
-			Username:            userNative,
+			Username:            xxt.UserNative,
 			TLSServerCACertPath: "_testdata/mysql_ca.pem",
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -265,9 +255,9 @@ func TestCreateSession(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
 			UseTLS:   true,
-			Username: userNative,
+			Username: xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -284,9 +274,9 @@ func TestCreateSession(t *testing.T) {
 			Address:    testContext.XPluginAddr,
 			UseTLS:     false,
 			AuthMethod: xmysql.AuthMethodPlain,
-			Username:   userNative,
+			Username:   xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		_, err := xmysql.CreateSession(context.Background(), config)
 		xt.KO(t, err)
@@ -298,9 +288,9 @@ func TestCreateSession(t *testing.T) {
 			Address:    testContext.XPluginAddr,
 			UseTLS:     false,
 			AuthMethod: xmysql.AuthMethodMySQL41,
-			Username:   userNative,
+			Username:   xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -312,9 +302,9 @@ func TestCreateSession(t *testing.T) {
 			Address:    testContext.XPluginAddr,
 			UseTLS:     true,
 			AuthMethod: xmysql.AuthMethodMySQL41,
-			Username:   userNative,
+			Username:   xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -328,9 +318,9 @@ func TestCreateSession(t *testing.T) {
 			Address:    testContext.XPluginAddr,
 			UseTLS:     true,
 			AuthMethod: xmysql.AuthMethodPlain,
-			Username:   userNative,
+			Username:   xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -344,9 +334,9 @@ func TestCreateSession(t *testing.T) {
 			Address:    testContext.XPluginAddr,
 			UseTLS:     true,
 			AuthMethod: xmysql.AuthMethodAuto,
-			Username:   userCachedSHA256,
+			Username:   xxt.UserCachedSHA256,
 		}
-		config.SetPassword(userCachedSHA256Pwd)
+		config.SetPassword(xxt.UserCachedSHA256Pwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -359,8 +349,8 @@ func TestCreateSession(t *testing.T) {
 
 	t.Run("SHA256 caching after plain authentication using TLS", func(t *testing.T) {
 		xt.OK(t, testContext.Server.FlushPrivileges())
-		password := userCachedSHA256Pwd
-		username := userCachedSHA256
+		password := xxt.UserCachedSHA256Pwd
+		username := xxt.UserCachedSHA256
 
 		config := (&xmysql.ConnectConfig{
 			Address: testContext.XPluginAddr,
@@ -415,10 +405,10 @@ func TestCreateSession(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:      testContext.XPluginAddr,
 			UseTLS:       true,
-			Username:     userNative,
+			Username:     xxt.UserNative,
 			TimeZoneName: "Europe/Berlin",
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
@@ -433,9 +423,9 @@ func TestCreateSession(t *testing.T) {
 func TestSession_ExecuteStatement(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	t.Run("numeric data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_numeric"))
@@ -704,15 +694,15 @@ func TestSession_CurrentSchema(t *testing.T) {
 	t.Run("configure schema and get current schema name", func(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
-			Username: userNative,
+			Username: xxt.UserNative,
 			Schema:   testSchema,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchema(context.Background())
+		schema, err := ses.CurrentSchemaName(context.Background())
 		xt.OK(t, err)
 		xt.Eq(t, testSchema, schema)
 	})
@@ -720,14 +710,14 @@ func TestSession_CurrentSchema(t *testing.T) {
 	t.Run("no current schema in configuration means empty schema name", func(t *testing.T) {
 		config := &xmysql.ConnectConfig{
 			Address:  testContext.XPluginAddr,
-			Username: userNative,
+			Username: xxt.UserNative,
 		}
-		config.SetPassword(userNativePwd)
+		config.SetPassword(xxt.UserNativePwd)
 
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchema(context.Background())
+		schema, err := ses.CurrentSchemaName(context.Background())
 		xt.OK(t, err)
 		xt.Eq(t, "", schema)
 	})
@@ -736,9 +726,9 @@ func TestSession_CurrentSchema(t *testing.T) {
 func TestSession_SetTimeZone(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	locName := "America/Los_Angeles"
 	locUSALA, err := time.LoadLocation(locName)
@@ -784,9 +774,9 @@ func TestSession_SetTimeZone(t *testing.T) {
 func TestSession_SetCollation(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	t.Run("set collation and retrieve", func(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
@@ -814,9 +804,9 @@ func TestSession_SetCollation(t *testing.T) {
 func TestSession_PrepareStatement(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
@@ -835,9 +825,9 @@ func TestSession_PrepareStatement(t *testing.T) {
 func TestSession_DeallocatePrepareStatement(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)

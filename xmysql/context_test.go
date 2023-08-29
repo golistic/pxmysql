@@ -11,6 +11,6 @@ import (
 
 func TestContextTimeLocation(t *testing.T) {
 	t.Run("no time location in context", func(t *testing.T) {
-		xt.Eq(t, defaultTimeLocation.String(), ContextTimeLocation(context.Background()).String())
+		xt.Eq(t, DefaultTimeLocation.String(), ContextTimeLocation(context.Background()).String())
 	})
 }

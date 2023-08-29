@@ -1,6 +1,6 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package network
 
 import (
 	"encoding/json"
@@ -15,18 +15,20 @@ import (
 
 var (
 	traceReadWrites bool
-	traceValues     bool
+	TraceValues     bool
 )
 
 func init() {
 	_, traceReadWrites = os.LookupEnv("PXMYSQL_TRACE")
-	_, traceValues = os.LookupEnv("PXMYSQL_TRACE_VALUES")
+	_, TraceValues = os.LookupEnv("PXMYSQL_TRACE_VALUES")
 	if !traceReadWrites {
-		traceValues = false
+		TraceValues = false
 	}
 }
 
-func trace(action string, msg any, a ...any) {
+// Trace is used for debugging and is enabled by setting the PYMYSQL_TRACE
+// environment variable.
+func Trace(action string, msg any, a ...any) {
 	if !traceReadWrites || msg == nil {
 		return
 	}
@@ -53,7 +55,7 @@ func trace(action string, msg any, a ...any) {
 	var s string
 	var topic string
 	switch v := msg.(type) {
-	case *serverMessage:
+	case *ServerMessage:
 		topic = v.ServerMessageType().String()
 	case *mysqlxnotice.SessionStateChanged:
 		topic = v.GetParam().String()

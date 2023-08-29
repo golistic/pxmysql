@@ -1,6 +1,6 @@
-// Copyright (c) 2022, Geert JM Vanderkelen
+// Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package statements
 
 import (
 	"bytes"
@@ -9,11 +9,12 @@ import (
 	"github.com/golistic/xgo/xmath"
 )
 
-const stmtPlaceholder = '?'
+const Placeholder = '?'
 
-// substitutePlaceholders replaces the placeholders within stmt with respective element of args.
-func substitutePlaceholders(stmt string, args ...any) (string, error) {
-	placeholders := placeholderIndexes(stmtPlaceholder, stmt)
+// SubstitutePlaceholders replaces the placeholders within stmt with respective element of args.
+func SubstitutePlaceholders(stmt string, args ...any) (string, error) {
+
+	placeholders := PlaceholderIndexes(Placeholder, stmt)
 	if len(placeholders) != len(args) {
 		return "", fmt.Errorf("need %d placeholder(s); found %d)", len(args), len(placeholders))
 	}
@@ -34,7 +35,7 @@ func substitutePlaceholders(stmt string, args ...any) (string, error) {
 			continue
 		}
 
-		quoted, err := quoteSQLValue(arg)
+		quoted, err := QuoteSQLValue(arg)
 		if err != nil {
 			return "", err
 		}
@@ -53,7 +54,9 @@ func substitutePlaceholders(stmt string, args ...any) (string, error) {
 	return string(buf), nil
 }
 
-func placeholderIndexes(placeholder rune, query string) []int {
+// PlaceholderIndexes returns the indices of all placeholders within query.
+func PlaceholderIndexes(placeholder rune, query string) []int {
+
 	var indexes []int
 
 	var quoted bool
@@ -84,7 +87,10 @@ func placeholderIndexes(placeholder rune, query string) []int {
 	return indexes
 }
 
-func quoteSQLValue(p any) (string, error) {
+// QuoteSQLValue quotes p so that it can be safely used to substituted placeholders
+// within a SQL query.
+func QuoteSQLValue(p any) (string, error) {
+
 	switch v := p.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprintf("%d", v), nil

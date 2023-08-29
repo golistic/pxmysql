@@ -1,6 +1,6 @@
 // Copyright (c) 2023, Geert JM Vanderkelen
 
-package xmysql
+package network
 
 import (
 	"google.golang.org/protobuf/encoding/protowire"

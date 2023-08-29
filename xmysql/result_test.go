@@ -17,9 +17,9 @@ import (
 func TestResult_FetchRow(t *testing.T) {
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
-		Username: userNative,
+		Username: xxt.UserNative,
 	}
-	config.SetPassword(userNativePwd)
+	config.SetPassword(xxt.UserNativePwd)
 
 	tbl := "bulk_fidiEfiS223"
 

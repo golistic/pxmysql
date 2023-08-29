@@ -12,6 +12,7 @@ import (
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxdatatypes"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxprepare"
+	"github.com/golistic/pxmysql/xmysql/internal/scalars"
 )
 
 type Prepared struct {
@@ -42,85 +43,85 @@ func (p *Prepared) Execute(ctx context.Context, args ...any) (*Result, error) {
 		// ridiculous type-switch; preventing using reflection
 		switch v := a.(type) {
 		case nil:
-			pArgs[i] = nilAsScalar()
+			pArgs[i] = scalars.Nil()
 		case bool:
-			pArgs[i] = boolAsScalar(v)
+			pArgs[i] = scalars.Bool(v)
 		case *bool:
-			pArgs[i] = boolAsScalar(*v)
+			pArgs[i] = scalars.Bool(*v)
 		case int:
-			pArgs[i] = signedIntAsScalar(v)
+			pArgs[i] = scalars.SignedInt(v)
 		case int8:
-			pArgs[i] = signedIntAsScalar(v)
+			pArgs[i] = scalars.SignedInt(v)
 		case int16:
-			pArgs[i] = signedIntAsScalar(v)
+			pArgs[i] = scalars.SignedInt(v)
 		case int32:
-			pArgs[i] = signedIntAsScalar(v)
+			pArgs[i] = scalars.SignedInt(v)
 		case int64:
-			pArgs[i] = signedIntAsScalar(v)
+			pArgs[i] = scalars.SignedInt(v)
 		case uint:
-			pArgs[i] = unsignedIntAsScalar(v)
+			pArgs[i] = scalars.UnsignedInt(v)
 		case uint8:
-			pArgs[i] = unsignedIntAsScalar(v)
+			pArgs[i] = scalars.UnsignedInt(v)
 		case uint16:
-			pArgs[i] = unsignedIntAsScalar(v)
+			pArgs[i] = scalars.UnsignedInt(v)
 		case uint32:
-			pArgs[i] = unsignedIntAsScalar(v)
+			pArgs[i] = scalars.UnsignedInt(v)
 		case uint64:
-			pArgs[i] = unsignedIntAsScalar(v)
+			pArgs[i] = scalars.UnsignedInt(v)
 		case *int:
-			pArgs[i] = signedIntAsScalar(*v)
+			pArgs[i] = scalars.SignedInt(*v)
 		case *int8:
-			pArgs[i] = signedIntAsScalar(*v)
+			pArgs[i] = scalars.SignedInt(*v)
 		case *int16:
-			pArgs[i] = signedIntAsScalar(*v)
+			pArgs[i] = scalars.SignedInt(*v)
 		case *int32:
-			pArgs[i] = signedIntAsScalar(*v)
+			pArgs[i] = scalars.SignedInt(*v)
 		case *int64:
-			pArgs[i] = signedIntAsScalar(*v)
+			pArgs[i] = scalars.SignedInt(*v)
 		case *uint:
-			pArgs[i] = unsignedIntAsScalar(*v)
+			pArgs[i] = scalars.UnsignedInt(*v)
 		case *uint8:
-			pArgs[i] = unsignedIntAsScalar(*v)
+			pArgs[i] = scalars.UnsignedInt(*v)
 		case *uint16:
-			pArgs[i] = unsignedIntAsScalar(*v)
+			pArgs[i] = scalars.UnsignedInt(*v)
 		case *uint32:
-			pArgs[i] = unsignedIntAsScalar(*v)
+			pArgs[i] = scalars.UnsignedInt(*v)
 		case *uint64:
-			pArgs[i] = unsignedIntAsScalar(*v)
+			pArgs[i] = scalars.UnsignedInt(*v)
 		case string:
-			pArgs[i] = stringAsScalar(v)
+			pArgs[i] = scalars.String(v)
 		case *string:
-			pArgs[i] = stringAsScalar(v)
+			pArgs[i] = scalars.String(v)
 		case []byte:
-			pArgs[i] = byteSliceAsScalar(v)
+			pArgs[i] = scalars.Bytes(v)
 		case float32:
-			pArgs[i] = float32IntAsScalar(v)
+			pArgs[i] = scalars.Float32(v)
 		case *float32:
-			pArgs[i] = float32IntAsScalar(*v)
+			pArgs[i] = scalars.Float32(*v)
 		case float64:
-			pArgs[i] = float64IntAsScalar(v)
+			pArgs[i] = scalars.Float64(v)
 		case *float64:
-			pArgs[i] = float64IntAsScalar(*v)
+			pArgs[i] = scalars.Float64(*v)
 		case decimal.Decimal:
-			pArgs[i] = decimalAsScalar(v)
+			pArgs[i] = scalars.Decimal(v)
 		case *decimal.Decimal:
-			pArgs[i] = decimalAsScalar(*v)
+			pArgs[i] = scalars.Decimal(*v)
 		case time.Time:
-			if pArgs[i], err = timeAsScalar(v, p.session.timeLocation.String()); err != nil {
+			if pArgs[i], err = scalars.Time(v, p.session.TimeLocation().String()); err != nil {
 				return nil, err
 			}
 		case *time.Time:
-			if pArgs[i], err = timeAsScalar(*v, p.session.timeLocation.String()); err != nil {
+			if pArgs[i], err = scalars.Time(*v, p.session.TimeLocation().String()); err != nil {
 				return nil, err
 			}
 		case []string:
-			pArgs[i] = stringAsScalar(strings.Join(v, ","))
+			pArgs[i] = scalars.String(strings.Join(v, ","))
 		default:
 			return nil, fmt.Errorf("argument type '%T' not supported", a)
 		}
 	}
 
-	if err := write(ctx, p.session, &mysqlxprepare.Execute{
+	if err := p.session.Write(ctx, &mysqlxprepare.Execute{
 		StmtId: &p.result.stmtID,
 		Args:   pArgs,
 	}); err != nil {
