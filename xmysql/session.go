@@ -16,7 +16,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golistic/xgo/xstrings"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxconnection"
@@ -30,16 +29,14 @@ import (
 	"github.com/golistic/pxmysql/xmysql/internal/statements"
 )
 
-const DefaultPort = "33060"
-const DefaultHost = "127.0.0.1"
-
 // Session uses the Connection configuration to set up a session with
 // the MySQL server through the X Plugin. When a session is instantiated
 // the authentication start, connection is switched to TLS (if needed).
 // All interaction with the server goes through this session.
 type Session struct {
-	Config             ConnectConfig
-	currentSchemaName  *string
+	config             ConnectConfig
+	defaultSchemaName  string
+	activeSchemaName   string
 	id                 int
 	mysqlVersion       string
 	conn               net.Conn
@@ -81,15 +78,16 @@ func NewSession(config *ConnectConfig) (*Session, error) {
 	cfg.Password = nil
 
 	ses := &Session{
-		Config:            cfg,
+		config:            cfg,
 		password:          password,
-		currentSchemaName: xstrings.Pointer(cfg.Schema),
+		defaultSchemaName: cfg.Schema,
+		activeSchemaName:  cfg.Schema,
 		conn:              nil,
 		timeLocation:      DefaultTimeLocation,
 	}
 
-	if ses.Config.UnixSockAddr != "" {
-		f, err := filepath.Abs(ses.Config.UnixSockAddr)
+	if ses.config.UnixSockAddr != "" {
+		f, err := filepath.Abs(ses.config.UnixSockAddr)
 		if err == nil {
 			var stat os.FileInfo
 			stat, err = os.Stat(f)
@@ -101,32 +99,32 @@ func NewSession(config *ConnectConfig) (*Session, error) {
 		}
 
 		if err != nil {
-			return nil, mysqlerrors.New(mysqlerrors.ClientBadUnixSocket, ses.Config.UnixSockAddr, errors.Unwrap(err))
+			return nil, mysqlerrors.New(mysqlerrors.ClientBadUnixSocket, ses.config.UnixSockAddr, errors.Unwrap(err))
 		}
-		ses.Config.UnixSockAddr = f
+		ses.config.UnixSockAddr = f
 	} else {
-		h, p, err := net.SplitHostPort(ses.Config.Address)
+		h, p, err := net.SplitHostPort(ses.config.Address)
 		var addrErr *net.AddrError
 		if errors.As(err, &addrErr) {
-			h = ses.Config.Address // on error h is empty
+			h = ses.config.Address // on error h is empty
 			p = DefaultPort
 		}
 		if h == "" {
 			h = DefaultHost
 		}
-		ses.Config.Address = net.JoinHostPort(h, p)
+		ses.config.Address = net.JoinHostPort(h, p)
 	}
 
-	if ses.Config.AuthMethod == "" {
-		ses.Config.AuthMethod = DefaultConnectConfig.AuthMethod
+	if ses.config.AuthMethod == "" {
+		ses.config.AuthMethod = DefaultConnectConfig.AuthMethod
 	} else {
-		if !SupportedAuthMethods().Has(ses.Config.AuthMethod) {
-			return nil, fmt.Errorf("unsupported authentication type '%s'", ses.Config.AuthMethod)
+		if !SupportedAuthMethods().Has(ses.config.AuthMethod) {
+			return nil, fmt.Errorf("unsupported authentication type '%s'", ses.config.AuthMethod)
 		}
 	}
 
-	if ses.Config.TimeZoneName != "" {
-		l, err := time.LoadLocation(ses.Config.TimeZoneName)
+	if ses.config.TimeZoneName != "" {
+		l, err := time.LoadLocation(ses.config.TimeZoneName)
 		if err != nil {
 			return nil, fmt.Errorf("failed loading time location (%w)", err)
 		}
@@ -144,13 +142,20 @@ func (ses *Session) String() string {
 	return fmt.Sprintf("<Session:%s>", state)
 }
 
+// Config returns the connection configuration of this session.
+// Once a session is configured, it's configuration cannot change. Note that the password
+// is the nil string.
+func (ses *Session) Config() ConnectConfig {
+	return ses.config
+}
+
 func (ses *Session) TimeLocation() *time.Location {
 	return ses.timeLocation
 }
 
 // IsReachable returns whether the configured MySQL instance is available.
 func (ses *Session) IsReachable() bool {
-	c, _ := net.DialTimeout("tcp", ses.Config.Address, time.Second)
+	c, _ := net.DialTimeout("tcp", ses.config.Address, time.Second)
 	if c != nil {
 		_ = c.Close()
 		return true
@@ -277,43 +282,6 @@ func (ses *Session) DeallocatePrepareStatement(ctx context.Context, stmtID uint3
 	return nil
 }
 
-// SetCurrentSchema sets the current schema (database) of this session.
-func (ses *Session) SetCurrentSchema(ctx context.Context, name string) error {
-
-	if _, err := ses.ExecuteStatement(ctx, "USE `"+name+"`"); err != nil {
-		return err
-	}
-
-	ses.currentSchemaName = xstrings.Pointer(name)
-
-	return nil
-}
-
-// CurrentSchemaName retrieves the current schema (database) of this session.
-func (ses *Session) CurrentSchemaName(ctx context.Context) (string, error) {
-
-	if ses.currentSchemaName != nil {
-		return *ses.currentSchemaName, nil
-	}
-
-	res, err := ses.ExecuteStatement(ctx, "SELECT SCHEMA()")
-	if err != nil {
-		return "", err
-	}
-
-	if len(res.Rows) > 1 {
-		return "", fmt.Errorf("failed getting current schema (too many rows)")
-	}
-
-	if res.Rows[0].Values[0] != nil {
-		if v := res.Rows[0].Values[0].(null.String); v.Valid {
-			return res.Rows[0].Values[0].(null.String).String, err
-		}
-	}
-
-	return "", nil // no current schema
-}
-
 func (ses *Session) SetCollation(ctx context.Context, name string) error {
 	c, ok := Collations[name]
 	if !ok {
@@ -390,7 +358,7 @@ func (ses *Session) TimeZone(ctx context.Context) (*time.Location, error) {
 
 // SessionID retrieves the MySQL server connection (session) ID.
 func (ses *Session) SessionID(ctx context.Context) (int, error) {
-	// CurrentSchemaName retrieves the current schema (database) of this session.
+	// ActiveSchemaName retrieves the current schema (database) of this session.
 	res, err := ses.ExecuteStatement(ctx, "SELECT CONNECTION_ID()")
 	if err != nil {
 		return 0, err
@@ -403,21 +371,121 @@ func (ses *Session) SessionID(ctx context.Context) (int, error) {
 	return int(res.Rows[0].Values[0].(uint64)), nil
 }
 
+// SetActiveSchema sets the active schema (database) of this session.
+func (ses *Session) SetActiveSchema(ctx context.Context, name string) error {
+
+	if _, err := ses.ExecuteStatement(ctx, "USE `"+name+"`"); err != nil {
+		return err
+	}
+
+	ses.activeSchemaName = name
+
+	return nil
+}
+
+// ActiveSchemaName retrieves the current schema (database) of this session.
+func (ses *Session) ActiveSchemaName() string {
+
+	return ses.activeSchemaName
+}
+
+// DefaultSchemaName retrieves the default schema (database) set when
+// configuring this session.
+func (ses *Session) DefaultSchemaName() string {
+
+	return ses.defaultSchemaName
+}
+
+// Schema returns a new Schema object allowing access to contents of the active schema of this session.
+func (ses *Session) Schema(ctx context.Context) (*Schema, error) {
+	return newSchema(ses, ses.activeSchemaName)
+}
+
+// SchemaWithName returns a new Schema object allowing access to contents of the named schema using this session.
+func (ses *Session) SchemaWithName(ctx context.Context, name string) (*Schema, error) {
+	return newSchema(ses, name)
+}
+
+// DefaultSchema returns a new Schema object allowing access to contents of the schema
+// specified in the configuration of this session.
+func (ses *Session) DefaultSchema(ctx context.Context, name string) (*Schema, error) {
+	return newSchema(ses, name)
+}
+
+// Schemas returns a slice containing all available schemas for this session.
+func (ses *Session) Schemas(ctx context.Context) ([]*Schema, error) {
+
+	query := "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA ORDER BY SCHEMA_NAME"
+	res, err := ses.ExecuteStatement(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.Rows) == 0 {
+		return nil, nil
+	}
+
+	schemas := make([]*Schema, len(res.Rows))
+	for i, row := range res.Rows {
+		name, ok := row.Values[0].(null.String)
+		if !ok || !name.Valid {
+			continue
+		}
+		schemas[i], err = newSchema(ses, name.String)
+		if err != nil {
+			return nil, fmt.Errorf("getting schemas (%w)", err)
+		}
+	}
+
+	return schemas, nil
+}
+
+// CreateSchema creates a schema or database with given name. It returns a Schema object
+// which has its active schema set to the newly created database.
+func (ses *Session) CreateSchema(ctx context.Context, name string) (*Schema, error) {
+	n, err := statements.QuoteIdentifier(name)
+	if err != nil {
+		return nil, fmt.Errorf("creating schema (%w)", err)
+	}
+
+	query := fmt.Sprintf("CREATE DATABASE %s", n)
+	if _, err := ses.ExecuteStatement(ctx, query); err != nil {
+		return nil, fmt.Errorf("creating schema (%w)", err)
+	}
+
+	return ses.SchemaWithName(ctx, name)
+}
+
+// DropSchema drops a schema or database with given name.
+func (ses *Session) DropSchema(ctx context.Context, name string) error {
+	n, err := statements.QuoteIdentifier(name)
+	if err != nil {
+		return fmt.Errorf("dropping schema (%w)", err)
+	}
+
+	query := fmt.Sprintf("DROP DATABASE %s", n)
+	if _, err := ses.ExecuteStatement(ctx, query); err != nil {
+		return fmt.Errorf("creating schema (%w)", err)
+	}
+
+	return nil
+}
+
 // Open opens the connection to the MySQL server. This method is called by
 // CreateSession, but not NewSession.
 func (ses *Session) Open(ctx context.Context) error {
 	var err error
 
-	network := "tcp"
-	address := ses.Config.Address
+	networkKind := "tcp"
+	address := ses.config.Address
 	errCode := mysqlerrors.ClientBadTCPSocket
-	if ses.Config.UnixSockAddr != "" {
-		network = "unix"
-		address = ses.Config.UnixSockAddr
+	if ses.config.UnixSockAddr != "" {
+		networkKind = "unix"
+		address = ses.config.UnixSockAddr
 		errCode = mysqlerrors.ClientBadUnixSocket
 	}
 
-	ses.conn, err = new(net.Dialer).DialContext(ctx, network, address)
+	ses.conn, err = new(net.Dialer).DialContext(ctx, networkKind, address)
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
 		return mysqlerrors.New(errCode, opErr.Addr,
@@ -474,7 +542,7 @@ func (ses *Session) Open(ctx context.Context) error {
 }
 
 func (ses *Session) negotiate(ctx context.Context) error {
-	if ses.Config.UseTLS {
+	if ses.config.UseTLS {
 		if err := network.Write(ctx, ses.conn, &mysqlxconnection.CapabilitiesSet{
 			Capabilities: &mysqlxconnection.Capabilities{
 				Capabilities: []*mysqlxconnection.Capability{{
@@ -495,8 +563,8 @@ func (ses *Session) negotiate(ctx context.Context) error {
 
 		// if TLS is supported, we got an OK, and we do the TLS handshake
 		var tlsConfig *tls.Config
-		if ses.Config.TLSServerCACertPath != "" {
-			if err := network.AddServerCACertFromFile(ses.Config.TLSServerCACertPath); err != nil {
+		if ses.config.TLSServerCACertPath != "" {
+			if err := network.AddServerCACertFromFile(ses.config.TLSServerCACertPath); err != nil {
 				return err
 			}
 			tlsConfig = &tls.Config{
@@ -527,7 +595,7 @@ func (ses *Session) authenticate(ctx context.Context) error {
 	_, tlsOK := ses.conn.(*tls.Conn)
 
 	var authMethods []AuthMethodType
-	if ses.Config.AuthMethod == AuthMethodAuto {
+	if ses.config.AuthMethod == AuthMethodAuto {
 		if ses.serverCapabilities != nil && ses.serverCapabilities.TLS {
 			authMethods = append(authMethods, AuthMethodPlain)
 		}
@@ -535,7 +603,7 @@ func (ses *Session) authenticate(ctx context.Context) error {
 	} else if ses.usedAuthMethod == AuthMethodPlain && !tlsOK {
 		return fmt.Errorf("plain text authentication only supported over TLS")
 	} else {
-		authMethods = []AuthMethodType{ses.Config.AuthMethod}
+		authMethods = []AuthMethodType{ses.config.AuthMethod}
 	}
 
 	var authErr error
@@ -587,10 +655,10 @@ func (ses *Session) authenticateWith(ctx context.Context, method AuthMethodType)
 	}
 
 	authData, err := authDataFunc(authn{
-		username:  ses.Config.Username,
+		username:  ses.config.Username,
 		password:  ses.password,
 		challenge: res.authChallenge,
-		schema:    ses.Config.Schema,
+		schema:    ses.config.Schema,
 	})
 	if err != nil {
 		return false, err
@@ -614,9 +682,9 @@ func (ses *Session) authenticatePlain(ctx context.Context) (bool, error) {
 	}
 
 	authData, err := authMySQLPlain(authn{
-		username: ses.Config.Username,
+		username: ses.config.Username,
 		password: ses.password,
-		schema:   ses.Config.Schema,
+		schema:   ses.config.Schema,
 	})
 	if err != nil {
 		return false, err
@@ -661,7 +729,7 @@ func (ses *Session) getServerCapabilities(ctx context.Context) error {
 
 func (ses *Session) metaInformation(ctx context.Context) error {
 
-	// note: CurrentSchemaName retrieves the current schema (database) of this session.
+	// note: ActiveSchemaName retrieves the current schema (database) of this session.
 
 	// we try to get everything in one query
 	res, err := ses.ExecuteStatement(ctx, `SELECT VERSION(), CONNECTION_ID(),
@@ -693,6 +761,6 @@ func (ses *Session) handleResult(ctx context.Context, doneWhen doneWhenFunc) (*R
 }
 
 func (ses *Session) serverHostname() string {
-	host, _, _ := net.SplitHostPort(ses.Config.Address) // error ignored; just return empty if not available
+	host, _, _ := net.SplitHostPort(ses.config.Address) // error ignored; just return empty if not available
 	return host
 }

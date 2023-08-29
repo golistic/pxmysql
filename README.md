@@ -91,9 +91,31 @@ heading (bit like a roadmap).
     - [x] Test MySQL String data types
     - [x] Test MySQL Decimal data type
     - [ ] MySQL to Go types
-* [ ] Collections
-    - [ ] Create & Ensure
-    - [ ] Drop
+* [ ] MySQL X DevAPI
+    - [ ] Session
+      - [x] Get active and default schema
+      - [x] Get schema using name
+      - [x] Get list of available schemas (databases)
+      - [x] Create/Drop schema
+      - ..
+    - [ ] Schema
+      - [x] Get name
+      - [ ] Get list of available collections (tables)
+      - [ ] Get collection
+      - [ ] Get list of collections
+    - [ ] Collection
+      - [ ] Exists in database
+      - [ ] Add document
+      - [ ] Get document by ID
+      - [ ] Add or replace document
+      - [ ] Count of documents in collection
+      - [ ] Creating and dropping indices
+      - [ ] Retrieve documents
+      - [ ] Modify documents
+      - [ ] Remove one or more documents
+      - [ ] Replace document
+    - [ ] Table
+    - [ ] View
 * [ ] Use Prepared Statement
     - [x] Type `statement` (the conventional SQL PREPARE)
     - [ ] CRUD operations: types `INSERT`, `FIND`, and `DELETE`

@@ -35,7 +35,7 @@ func SubstitutePlaceholders(stmt string, args ...any) (string, error) {
 			continue
 		}
 
-		quoted, err := QuoteSQLValue(arg)
+		quoted, err := QuoteValue(arg)
 		if err != nil {
 			return "", err
 		}
@@ -85,24 +85,4 @@ func PlaceholderIndexes(placeholder rune, query string) []int {
 	}
 
 	return indexes
-}
-
-// QuoteSQLValue quotes p so that it can be safely used to substituted placeholders
-// within a SQL query.
-func QuoteSQLValue(p any) (string, error) {
-
-	switch v := p.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return fmt.Sprintf("%d", v), nil
-	case []byte:
-		return fmt.Sprintf("_binary'%x'", v), nil
-	case float32, float64:
-		return fmt.Sprintf("%f", v), nil
-	case string:
-		// handled as default (last return)
-	default:
-		return "", fmt.Errorf("cannot quote parameter with value type %T", p)
-	}
-
-	return "'" + p.(string) + "'", nil
 }
