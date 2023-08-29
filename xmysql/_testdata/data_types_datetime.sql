@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2022, Geert JM Vanderkelen
- */
-
 USE pxmysql_tests;
 
 DROP TABLE IF EXISTS `data_types_datetime`;

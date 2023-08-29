@@ -25,7 +25,7 @@ func TestResult_FetchRow(t *testing.T) {
 
 	ses, err := xmysql.CreateSession(context.Background(), config)
 	xt.OK(t, err)
-	xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+	xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 	createTable := fmt.Sprintf(
 		"CREATE TABLE `%s` (id INT AUTO_INCREMENT PRIMARY KEY, c1 VARCHAR(30) NOT NULL)", tbl)
@@ -46,7 +46,7 @@ func TestResult_FetchRow(t *testing.T) {
 	t.Run("fetch", func(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
-		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 		mUse := xxt.NewMemoryUse()
 		res, err := ses.ExecuteStatement(context.Background(),

@@ -4,6 +4,16 @@ package xmysql
 
 const authChallengeLen = 20
 
+const (
+	AuthMethodPlain        AuthMethodType = "PLAIN"
+	AuthMethodAuto         AuthMethodType = "AUTO"
+	AuthMethodSHA256Memory AuthMethodType = "SHA256_MEMORY"
+	AuthMethodMySQL41      AuthMethodType = "MYSQL41"
+)
+
+const DefaultPort = "33060"
+const DefaultHost = "127.0.0.1"
+
 type AuthMethodType string
 
 type AuthMethodTypes []AuthMethodType
@@ -16,13 +26,6 @@ func (a AuthMethodTypes) Has(m AuthMethodType) bool {
 	}
 	return false
 }
-
-const (
-	AuthMethodPlain        AuthMethodType = "PLAIN"
-	AuthMethodAuto         AuthMethodType = "AUTO"
-	AuthMethodSHA256Memory AuthMethodType = "SHA256_MEMORY"
-	AuthMethodMySQL41      AuthMethodType = "MYSQL41"
-)
 
 var defaultAuthMethods = []AuthMethodType{AuthMethodMySQL41, AuthMethodSHA256Memory}
 

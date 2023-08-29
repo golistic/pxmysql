@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,8 +46,8 @@ func TestNewSession(t *testing.T) {
 		ses, err := xmysql.NewSession(expConfig)
 		xt.OK(t, err)
 
-		xt.Assert(t, ses.Config.Password == nil)
-		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+		xt.Assert(t, ses.Config().Password == nil)
+		xt.Eq(t, ses.Config().AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
 	})
 
 	t.Run("if not given, AuthMethod is default", func(t *testing.T) {
@@ -58,17 +60,17 @@ func TestNewSession(t *testing.T) {
 		ses, err := xmysql.NewSession(expConfig)
 		xt.OK(t, err)
 
-		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+		xt.Eq(t, ses.Config().AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
 	})
 
 	t.Run("default configuration", func(t *testing.T) {
 		ses, err := xmysql.NewSession(nil)
 		xt.OK(t, err)
 
-		xt.Assert(t, ses.Config.Password == nil)
-		xt.Eq(t, ses.Config.Address, xmysql.DefaultConnectConfig.Address)
-		xt.Eq(t, ses.Config.Username, xmysql.DefaultConnectConfig.Username)
-		xt.Eq(t, ses.Config.AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
+		xt.Assert(t, ses.Config().Password == nil)
+		xt.Eq(t, ses.Config().Address, xmysql.DefaultConnectConfig.Address)
+		xt.Eq(t, ses.Config().Username, xmysql.DefaultConnectConfig.Username)
+		xt.Eq(t, ses.Config().AuthMethod, xmysql.DefaultConnectConfig.AuthMethod)
 	})
 
 	t.Run("MySQL X Plugin is reachable", func(t *testing.T) {
@@ -111,7 +113,7 @@ func TestNewSession(t *testing.T) {
 					Address: c.have,
 				})
 				xt.OK(t, err)
-				xt.Eq(t, c.exp, ses.Config.Address)
+				xt.Eq(t, c.exp, ses.Config().Address)
 			})
 		}
 	})
@@ -433,7 +435,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 		exp := map[int64]struct {
 			numBit               int64            // BIT
@@ -531,7 +533,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 		locCET, err := time.LoadLocation("CET")
 		xt.OK(t, err)
@@ -595,7 +597,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 		res, err := ses.ExecuteStatement(context.Background(), "SELECT * FROM data_types_string ORDER BY id")
 		xt.OK(t, err)
@@ -645,7 +647,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		xt.OK(t, ses.SetCurrentSchema(context.Background(), testSchema))
+		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
 		res, err := ses.ExecuteStatement(context.Background(),
 			"INSERT INTO inserts01 (c1) VALUES ('1'),('2')")
@@ -702,7 +704,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchemaName(context.Background())
+		schema := ses.ActiveSchemaName()
 		xt.OK(t, err)
 		xt.Eq(t, testSchema, schema)
 	})
@@ -717,7 +719,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		ses, err := xmysql.CreateSession(context.Background(), config)
 		xt.OK(t, err)
 
-		schema, err := ses.CurrentSchemaName(context.Background())
+		schema := ses.ActiveSchemaName()
 		xt.OK(t, err)
 		xt.Eq(t, "", schema)
 	})
@@ -844,5 +846,104 @@ func TestSession_DeallocatePrepareStatement(t *testing.T) {
 
 		_, err = prep.Execute(context.Background(), 3)
 		xxt.AssertMySQLError(t, err, 5110)
+	})
+}
+
+func TestSession_ActiveSchemaName(t *testing.T) {
+	config := &xmysql.ConnectConfig{
+		Address:  testContext.XPluginAddr,
+		Username: xxt.UserNative,
+		Schema:   "pxmysql_tests",
+	}
+	config.SetPassword(xxt.UserNativePwd)
+
+	t.Run("current database name as configured", func(t *testing.T) {
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		xt.Eq(t, config.Schema, ses.ActiveSchemaName())
+	})
+
+	t.Run("change active schema", func(t *testing.T) {
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		exp := "pxmysql_tests_a"
+		xt.OK(t, ses.SetActiveSchema(context.Background(), exp))
+		xt.Eq(t, exp, ses.ActiveSchemaName())
+		xt.Eq(t, config.Schema, ses.DefaultSchemaName())
+	})
+}
+
+func TestSession_Schemas(t *testing.T) {
+	config := &xmysql.ConnectConfig{
+		Address:  testContext.XPluginAddr,
+		Username: xxt.UserNative,
+	}
+	config.SetPassword(xxt.UserNativePwd)
+
+	t.Run("all databases", func(t *testing.T) {
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		exp := []string{"information_schema", "performance_schema", "pxmysql_tests", "pxmysql_tests_a"}
+		sort.Strings(exp)
+
+		schemas, err := ses.Schemas(context.Background())
+		xt.OK(t, err)
+		xt.Assert(t, len(schemas) >= len(exp), fmt.Sprintf("expected at least %d", len(exp)))
+
+		var got []string
+		for _, s := range schemas {
+			got = append(got, s.Name())
+		}
+		sort.Strings(got)
+
+		for _, n := range exp {
+			_, ok := slices.BinarySearch(got, n)
+			xt.Assert(t, ok, fmt.Sprintf("expected schema %s to be available", n))
+		}
+	})
+}
+
+func TestSession_CreateSchema(t *testing.T) {
+	t.Run("create new schema and drop it", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:  testContext.XPluginAddr,
+			Username: "root",
+			Password: xstrings.Pointer(testContext.MySQLRootPwd),
+		}
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		schemaName := "pxmysql_2839cks829dka"
+		schema, err := ses.CreateSchema(context.Background(), schemaName)
+		xt.OK(t, err)
+
+		xt.Eq(t, schemaName, schema.Name())
+
+		t.Run("drop schema", func(t *testing.T) {
+			xt.OK(t, ses.DropSchema(context.Background(), schemaName))
+		})
+	})
+
+	t.Run("unprivileged users cannot create schema", func(t *testing.T) {
+		config := &xmysql.ConnectConfig{
+			Address:  testContext.XPluginAddr,
+			Username: xxt.UserNative,
+		}
+		config.SetPassword(xxt.UserNativePwd)
+
+		ses, err := xmysql.CreateSession(context.Background(), config)
+		xt.OK(t, err)
+
+		schemaName := "pxmysql_sico29d9kpap21"
+		_, err = ses.CreateSchema(context.Background(), schemaName)
+		xt.KO(t, err)
+
+		exp := fmt.Sprintf("access denied for user '%s'@'%%' to database '%s' [1044:42000]",
+			xxt.UserNative, schemaName)
+		xt.Eq(t, exp, errors.Unwrap(err).Error())
 	})
 }
