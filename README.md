@@ -8,28 +8,33 @@ Copyright (c) 2022, 2023, Geert JM Vanderkelen
   <img alt="license: MIT" src="_badges/license.svg">
 </div>
 
-The Go pxmysql package implements the MySQL X Protocol and provides a Go `sql/driver`
-which uses it. The X Protocol communicates with MySQL using TCP port 33060 (default)
-using structured data serialized using Protocol Buffers.
+The pxmysql package is a low-level interface that facilitates communication
+with a MySQL server using structured data serialized with Protocol Buffers.
+It also provides an adapter (driver) for the standard Go `database/sql`
+interface.
 
-Note that the MySQL X Protocol is an alternative, an extension of the
-conventional well known text-based MySQL protocol.  
-If you are looking for a driver using the MySQL port 3306, please use the
-excellent [github.com/go-sql-driver/mysql][3].
+**Important note**: This package uses the MySQL X Protocol, which is an
+alternative to the conventional, well-known text-based MySQL protocol.
+
+If you are looking for a driver that uses the MySQL port 3306, please
+consider using the excellent [github.com/go-sql-driver/mysql][3] driver.
+The driver included with the pxmysql package does not strive to be compatible
+with `github.com/go-sql-driver/mysql`.
 
 Installation
 ------------
 
-The `pxmysql` package supports Go 1.19 and greater.
-
 ```go get -u github.com/golistic/pxmysql```
 
-Quick Start
------------
+Example Usage
+-------------
 
-The below code connects to the MySQL server and gets the current time.
+### Example using the standard Go `database/sql`
 
-Note! This is MySQL Protocol X; it uses TCP port `33060` (not `3306`!).
+The driver provided by pxmysql should be compatible with any examples and 
+tutorials that demonstrate Go's `database/sql` usage (using MySQL).
+
+**Note**: This uses the MySQL Protocol X with TCP port `33060` (not `3306`)!
 
 ```go
 package main
@@ -39,10 +44,7 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/golistic/pxmysql/register"
-	
-	// or import the following to use the driver name "mysql"
-	// _ "github.com/golistic/pxmysql/register/mysql"
+	_ "github.com/golistic/pxmysql/register" // register the driver
 )
 
 func main() {
@@ -51,17 +53,51 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var n string
-	if err := db.QueryRow("SELECT NOW()").Scan(&n); err != nil {
+	var ts time.Time
+	if err := db.QueryRow("SELECT NOW()").Scan(&ts); err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Printf("Server time: %s", n)
+	fmt.Printf("Server time: %s", ts)
 }
 ```
 
-The `useTLS` option is required when you use a user set to use the authentication
-method `caching_sha2_password`.
+The `useTLS` option is required when you use a user set to utilize the
+authentication method `caching_sha2_password`.
+
+### Example using the MySQL X DevAPI
+
+**Warning**: during the v0.9 pre-releases, the below is subject to change.
+
+```go
+	config := &xmysql.ConnectConfig{
+		Address:  "127.0.0.1:53360", // default X Plugin port
+		Username: "user_native",
+		Password: xstrings.Pointer("pwd_user_native"),
+		UseTLS:   true,
+	}
+
+	ctx := context.Background()
+
+	session, err := xmysql.CreateSession(ctx, config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query := "SELECT TABLE_NAME, TABLE_ROWS, CREATE_TIME FROM information_schema.tables WHERE TABLE_SCHEMA = ?"
+	result, err := session.ExecuteStatement(ctx, query, "pxmysql_tests")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, row := range result.Rows {
+		tableName := row.Values[0].(null.String)
+		tableRows := row.Values[1].(null.Uint64)
+		tableCreateTime := row.Values[2].(time.Time)
+
+		fmt.Printf("Table %s has %d rows and was created %s.\n", tableName.String, tableRows.Uint64, tableCreateTime)
+	}
+```
 
 Features
 --------
@@ -73,7 +109,6 @@ The following is a to-do list which shows also which features we are
 implementing. The order might vary, but it should give an idea where we are
 heading (bit like a roadmap).
 
-* [x] Set up project using Git with README and LICENSE
 * [x] Generate Go code from MySQL's `.protoc` files.
 * [x] Setup testing environment with Docker image of MySQL
 * [x] Connect and authenticate
@@ -100,9 +135,10 @@ heading (bit like a roadmap).
       - ..
     - [ ] Schema
       - [x] Get name
-      - [ ] Get list of available collections (tables)
-      - [ ] Get collection
-      - [ ] Get list of collections
+      - [x] Get list of available collections
+      - [ ] Get list of available objects (collections, tables, views)
+      - [x] Get collection
+      - [x] Create and drop collections
     - [ ] Collection
       - [ ] Exists in database
       - [ ] Add document
@@ -139,6 +175,10 @@ We do, however, generate Go code from MySQL Server Protocol Buffer files.
 Usage
 -----
 
+This package offers two ways to communicate with the MySQL server over the X Plugin:
+1. either using Go's `sql` package (the "standard" way)
+2. and more directly using the subpackage `xmysql`
+
 ### Without Using Go's SQL Driver
 
 1. Create a `Connection` object which holds configuration with which sessions
@@ -150,55 +190,7 @@ Usage
 The following example uses a user which has its authentication plugin set as
 `mysql_native_password`:
 
-```go
-package main
 
-import (
-  "context"
-  "fmt"
-  "log"
-
-  "github.com/golistic/pxmysql/xmysql"
-)
-
-func main() {
-  pwd := "tiger"
-  config := &xmysql.ConnectConfig{
-    Address:    "127.0.0.1:33060", // default X Plugin port
-    AuthMethod: xmysql.AuthMethodMySQL41,
-    Username:   "scott",
-    Password:   &pwd,
-  }
-
-  session, err := xmysql.CreateSession(context.Background(), config)
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  fmt.Println("Session", session)
-}
-```
-
-In the following snippet we select a string and a timestamp:
-
-```go
-package main
-
-import (
-  "time"
-
-  "github.com/golistic/pxmysql/xmysql"
-)
-
-// result of query: "SELECT 'now', NOW()" 
-func handleResult(res *xmysql.ResultResult) {
-  for _, row := range res.Rows {
-    _ = row[0].(string)
-    _ = row[1].(time.Time)
-  }
-}
-
-```
 
 MySQL Types to Go
 -----------------
@@ -224,7 +216,7 @@ which need to be type asserted.
 | `SET`                                            | `[]string`         | `null.Strings`  |
 | `SIGNED TINYINT/SMALLINT/MEDIUMINT/INT/BIGINT`   | `int64`            | `null.Int64`    |
 | `TEXT/TINYTEXT/MEDIUMTEXT/LONGTEXT`              | `string`           | `null.String`   |
-| `TIME`                                           | `time`             | `null.Duration` |
+| `TIME`                                           | `time.Duration`    | `null.Duration` |
 | `UNSIGNED TINYINT/SMALLINT/MEDIUMINT/INT/BIGINT` | `uint64`           | `null.Uint64`   |
 | `YEAR`                                           | `int`              | `null.Int64`    |
 

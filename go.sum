@@ -1,6 +1,4 @@
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
-github.com/golistic/envs v1.0.1 h1:IBK2/Vc4I/WpFcqiPGwC9kYrmZOj0b1HPs7NS+IyWn4=
-github.com/golistic/envs v1.0.1/go.mod h1:IOkqiFl8WD7xV/tcB1k2H7AiVyhdJG8BhWqA2vzUzrc=
 github.com/golistic/gomake v0.9.4 h1:6cOBeAsbSnacsskMvyg49DjCRCE9WnyhJv4Viy9rF9M=
 github.com/golistic/gomake v0.9.4/go.mod h1:IiYQuN6aK4Jb3QLA/rfOpeOqG7s8DNfBzVXZt8Pf6PA=
 github.com/golistic/shieldbadger v0.0.0-20230223210348-5649a4ba6aa9 h1:NBSzSvgVJjhI37ytLLcHLkRA7UTR/P1L/0dm6EY4GoE=

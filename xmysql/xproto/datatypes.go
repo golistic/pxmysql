@@ -1,6 +1,6 @@
 // Copyright (c) 2023, Geert JM Vanderkelen
 
-package scalars
+package xproto
 
 import (
 	"fmt"

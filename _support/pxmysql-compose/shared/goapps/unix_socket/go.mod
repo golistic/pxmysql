@@ -1,6 +1,6 @@
 module example.com/unix_socket
 
-go 1.19
+go 1.21
 
 replace github.com/golistic/pxmysql => /go/src/github.com/golistic/pxmysql
 
