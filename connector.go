@@ -33,7 +33,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 		config.Address = c.dataSource.Address
 	}
 
-	ses, err := xmysql.CreateSession(ctx, config)
+	ses, err := xmysql.GetSession(ctx, config)
 	if err != nil {
 		return nil, err
 	}

@@ -23,7 +23,7 @@ func TestResult_FetchRow(t *testing.T) {
 
 	tbl := "bulk_fidiEfiS223"
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	xt.OK(t, err)
 	xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 
@@ -44,7 +44,7 @@ func TestResult_FetchRow(t *testing.T) {
 	}
 
 	t.Run("fetch", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
 

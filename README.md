@@ -70,6 +70,21 @@ authentication method `caching_sha2_password`.
 **Warning**: during the v0.9 pre-releases, the below is subject to change.
 
 ```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/golistic/xgo/xstrings"
+
+	"github.com/golistic/pxmysql/null"
+	"github.com/golistic/pxmysql/xmysql"
+)
+
+func main() {
 	config := &xmysql.ConnectConfig{
 		Address:  "127.0.0.1:53360", // default X Plugin port
 		Username: "user_native",
@@ -79,7 +94,7 @@ authentication method `caching_sha2_password`.
 
 	ctx := context.Background()
 
-	session, err := xmysql.CreateSession(ctx, config)
+	session, err := xmysql.GetSession(ctx, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,6 +112,7 @@ authentication method `caching_sha2_password`.
 
 		fmt.Printf("Table %s has %d rows and was created %s.\n", tableName.String, tableRows.Uint64, tableCreateTime)
 	}
+}
 ```
 
 Features

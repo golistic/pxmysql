@@ -28,13 +28,13 @@ func TestSchema_Collections(t *testing.T) {
 
 		xt.OK(t, testContext.Server.LoadSQLScript("schema_collections"))
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		exp := []string{"collection_wic28skwixkd", "collection_weux73293jsnsj"}
 		sort.Strings(exp)
 
-		schema, err := ses.SchemaWithName(context.Background(), "pxmysql_tests")
+		schema, err := ses.GetSchemaWithName(context.Background(), "pxmysql_tests")
 		xt.OK(t, err)
 
 		collections, err := schema.GetCollections(context.Background())
@@ -61,10 +61,10 @@ func TestSchema_CreateCollection(t *testing.T) {
 	}
 	config.SetPassword(xxt.UserNativePwd)
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	xt.OK(t, err)
 
-	schema, err := ses.Schema(context.Background())
+	schema, err := ses.GetSchema(context.Background())
 	xt.OK(t, err)
 
 	t.Run("name is required", func(t *testing.T) {

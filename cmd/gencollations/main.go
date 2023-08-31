@@ -39,7 +39,7 @@ func main() {
 		UseTLS:   true,
 	}
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		os.Exit(1)

@@ -22,7 +22,7 @@ func TestMySQLErrors(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 
-		_, err := xmysql.CreateSession(ctx, config)
+		_, err := xmysql.GetSession(ctx, config)
 		xt.Eq(t, "unknown MySQL server host '127.0.0.40:33060' (i/o timeout) [2005:HY000]", err.Error())
 		xt.Eq(t, "i/o timeout", errors.Unwrap(err).Error())
 	})

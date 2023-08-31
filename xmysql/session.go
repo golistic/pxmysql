@@ -49,9 +49,9 @@ type Session struct {
 	timeLocation       *time.Location
 }
 
-// CreateSession instantiates a new session object connecting with given config and
+// GetSession instantiates a new session object connecting with given config and
 // opens the connection.
-func CreateSession(ctx context.Context, config *ConnectConfig) (*Session, error) {
+func GetSession(ctx context.Context, config *ConnectConfig) (*Session, error) {
 	ses, err := NewSession(config)
 	if err != nil {
 		return nil, err
@@ -410,13 +410,13 @@ func (ses *Session) DefaultSchemaName() string {
 	return ses.defaultSchemaName
 }
 
-// Schema returns a new Schema object allowing access to contents of the active schema of this session.
-func (ses *Session) Schema(_ context.Context) (*Schema, error) {
+// GetSchema returns a new Schema object allowing access to contents of the active schema of this session.
+func (ses *Session) GetSchema(_ context.Context) (*Schema, error) {
 	return newSchema(ses, ses.activeSchemaName)
 }
 
-// SchemaWithName returns a new Schema object allowing access to contents of the named schema using this session.
-func (ses *Session) SchemaWithName(_ context.Context, name string) (*Schema, error) {
+// GetSchemaWithName returns a new Schema object allowing access to contents of the named schema using this session.
+func (ses *Session) GetSchemaWithName(_ context.Context, name string) (*Schema, error) {
 	return newSchema(ses, name)
 }
 
@@ -467,7 +467,7 @@ func (ses *Session) CreateSchema(ctx context.Context, name string) (*Schema, err
 		return nil, fmt.Errorf("creating schema (%w)", err)
 	}
 
-	return ses.SchemaWithName(ctx, name)
+	return ses.GetSchemaWithName(ctx, name)
 }
 
 // DropSchema drops a schema or database with given name.
@@ -486,7 +486,7 @@ func (ses *Session) DropSchema(ctx context.Context, name string) error {
 }
 
 // Open opens the connection to the MySQL server. This method is called by
-// CreateSession, but not NewSession.
+// GetSession, but not NewSession.
 func (ses *Session) Open(ctx context.Context) error {
 	var err error
 
