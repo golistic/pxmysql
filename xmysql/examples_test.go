@@ -11,14 +11,14 @@ import (
 	"github.com/golistic/pxmysql/xmysql"
 )
 
-func ExampleConnection_NewSession_auto_notls() {
+func ExampleGetSession_auto_notls() {
 	config := &xmysql.ConnectConfig{
 		Address:  "127.0.0.1:53360", // see _support/pxmysql-compose/docker-compose.yml
 		Username: "user_native",
 	}
 	config.SetPassword("pwd_user_native")
 
-	session, err := xmysql.CreateSession(context.Background(), config)
+	session, err := xmysql.GetSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func ExampleConnection_NewSession_auto_notls() {
 	// Output: TLS: false
 }
 
-func ExampleConnection_NewSession_plain_withtls() {
+func ExampleGetSession_plain_withtls() {
 	config := &xmysql.ConnectConfig{
 		Address:    "127.0.0.1:53360", // see _support/pxmysql-compose/docker-compose.yml
 		AuthMethod: xmysql.AuthMethodPlain,
@@ -35,7 +35,7 @@ func ExampleConnection_NewSession_plain_withtls() {
 	}
 	config.SetPassword("pwd_user_native")
 
-	session, err := xmysql.CreateSession(context.Background(), config)
+	session, err := xmysql.GetSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func ExampleSession_ExecuteStatement() {
 	}
 	config.SetPassword("pwd_user_native")
 
-	session, err := xmysql.CreateSession(context.Background(), config)
+	session, err := xmysql.GetSession(context.Background(), config)
 	if err != nil {
 		log.Fatal(err)
 	}

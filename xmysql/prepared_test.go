@@ -32,7 +32,7 @@ func TestPrepared_Execute(t *testing.T) {
 	}
 	config.SetPassword(xxt.UserNativePwd)
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	xt.OK(t, err)
 
 	t.Run("all supported Go types", func(t *testing.T) {

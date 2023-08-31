@@ -153,7 +153,7 @@ func TestCreateSession(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 
-		_, err := xmysql.CreateSession(ctx, expConfig)
+		_, err := xmysql.GetSession(ctx, expConfig)
 		xt.KO(t, errors.Unwrap(err))
 		xt.Eq(t, "i/o timeout", errors.Unwrap(err).Error())
 	})
@@ -165,7 +165,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword("pwd_user_native")
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.Assert(t, ses.ServerCapabilities() != nil)
@@ -180,7 +180,7 @@ func TestCreateSession(t *testing.T) {
 			Address: testContext.MySQLAddr,
 		}
 
-		_, err := xmysql.CreateSession(context.Background(), config)
+		_, err := xmysql.GetSession(context.Background(), config)
 		xt.KO(t, err)
 		xt.Eq(t, "wrong protocol [2005:HY000]", err.Error())
 	})
@@ -206,7 +206,7 @@ func TestCreateSession(t *testing.T) {
 			Address: addr,
 		}
 
-		_, err = xmysql.CreateSession(context.Background(), config)
+		_, err = xmysql.GetSession(context.Background(), config)
 		xt.KO(t, err)
 		xt.Eq(t, "failed reading message payload (unexpected EOF)", err.Error())
 	})
@@ -219,7 +219,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.Assert(t, ses.ServerCapabilities() != nil)
@@ -238,7 +238,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.Assert(t, ses.ServerCapabilities() != nil)
@@ -261,7 +261,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.Assert(t, ses.ServerCapabilities() != nil)
@@ -280,7 +280,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		_, err := xmysql.CreateSession(context.Background(), config)
+		_, err := xmysql.GetSession(context.Background(), config)
 		xt.KO(t, err)
 		xt.Assert(t, strings.Contains(err.Error(), "plain text authentication only supported over TLS"))
 	})
@@ -294,7 +294,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		xt.Eq(t, xmysql.AuthMethodMySQL41, ses.AuthMethod())
 	})
@@ -308,7 +308,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		xt.Eq(t, xmysql.AuthMethodMySQL41, ses.AuthMethod())
 		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
@@ -324,7 +324,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		xt.Eq(t, xmysql.AuthMethodPlain, ses.AuthMethod())
 		xt.Assert(t, ses.UsesTLS(), "expected tls.Conn")
@@ -340,7 +340,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserCachedSHA256Pwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		defer func() { xt.OK(t, ses.Close()) }()
 
@@ -361,7 +361,7 @@ func TestCreateSession(t *testing.T) {
 			Username: username,
 		}).SetPassword(password)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 		defer func() { xt.OK(t, ses.Close()) }()
 
@@ -374,7 +374,7 @@ func TestCreateSession(t *testing.T) {
 			}
 			config.SetPassword(password)
 
-			ses, err := xmysql.CreateSession(context.Background(), config)
+			ses, err := xmysql.GetSession(context.Background(), config)
 			xt.OK(t, err)
 			defer func() { xt.OK(t, ses.Close()) }()
 
@@ -389,7 +389,7 @@ func TestCreateSession(t *testing.T) {
 				}
 				config.SetPassword(password)
 
-				ses, err := xmysql.CreateSession(context.Background(), config)
+				ses, err := xmysql.GetSession(context.Background(), config)
 				xt.OK(t, err)
 				defer func() { xt.OK(t, ses.Close()) }()
 
@@ -412,7 +412,7 @@ func TestCreateSession(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		sesZone, err := ses.TimeZone(context.Background())
@@ -432,7 +432,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("numeric data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_numeric"))
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
@@ -530,7 +530,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("datetime data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_datetime"))
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
@@ -594,7 +594,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("string data types", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "data_types_string"))
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
@@ -644,7 +644,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	t.Run("execute INSERT", func(t *testing.T) {
 		xt.OK(t, testContext.Server.LoadSQLScript("base", "inserting.sql"))
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.OK(t, ses.SetActiveSchema(context.Background(), testSchema))
@@ -665,7 +665,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	})
 
 	t.Run("use arguments and placeholders", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		res, err := ses.ExecuteStatement(context.Background(), "SELECT ?, ?, '?', ? from dual", 1, "one", 3)
@@ -679,7 +679,7 @@ func TestSession_ExecuteStatement(t *testing.T) {
 	})
 
 	t.Run("zero hour timestamp", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		res, err := ses.ExecuteStatement(context.Background(),
@@ -701,7 +701,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schema := ses.ActiveSchemaName()
@@ -716,7 +716,7 @@ func TestSession_CurrentSchema(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schema := ses.ActiveSchemaName()
@@ -737,7 +737,7 @@ func TestSession_SetTimeZone(t *testing.T) {
 	xt.OK(t, err)
 
 	t.Run("default UTC when no time zone is set", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		// without time location set, timestamps returned by MySQL are UTC
@@ -753,7 +753,7 @@ func TestSession_SetTimeZone(t *testing.T) {
 	})
 
 	t.Run("set time zone for session", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		// set time location for session
@@ -781,7 +781,7 @@ func TestSession_SetCollation(t *testing.T) {
 	config.SetPassword(xxt.UserNativePwd)
 
 	t.Run("set collation and retrieve", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		exp := xmysql.Collations["utf8mb4_sinhala_ci"]
@@ -793,7 +793,7 @@ func TestSession_SetCollation(t *testing.T) {
 	})
 
 	t.Run("set invalid collation", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		c := "big5_chinese_ci"
@@ -810,7 +810,7 @@ func TestSession_PrepareStatement(t *testing.T) {
 	}
 	config.SetPassword(xxt.UserNativePwd)
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	xt.OK(t, err)
 
 	stmt := "SELECT SQRT(POW(?,2) + POW(?,2)) AS hypotenuse"
@@ -831,7 +831,7 @@ func TestSession_DeallocatePrepareStatement(t *testing.T) {
 	}
 	config.SetPassword(xxt.UserNativePwd)
 
-	ses, err := xmysql.CreateSession(context.Background(), config)
+	ses, err := xmysql.GetSession(context.Background(), config)
 	xt.OK(t, err)
 
 	t.Run("successfully deallocate", func(t *testing.T) {
@@ -858,14 +858,14 @@ func TestSession_ActiveSchemaName(t *testing.T) {
 	config.SetPassword(xxt.UserNativePwd)
 
 	t.Run("current database name as configured", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		xt.Eq(t, config.Schema, ses.ActiveSchemaName())
 	})
 
 	t.Run("change active schema", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		exp := "pxmysql_tests_a"
@@ -883,7 +883,7 @@ func TestSession_Schemas(t *testing.T) {
 	config.SetPassword(xxt.UserNativePwd)
 
 	t.Run("all databases", func(t *testing.T) {
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		exp := []string{"information_schema", "performance_schema", "pxmysql_tests", "pxmysql_tests_a"}
@@ -914,7 +914,7 @@ func TestSession_CreateSchema(t *testing.T) {
 			Password: xstrings.Pointer(testContext.MySQLRootPwd),
 		}
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schemaName := "pxmysql_2839cks829dka"
@@ -935,7 +935,7 @@ func TestSession_CreateSchema(t *testing.T) {
 		}
 		config.SetPassword(xxt.UserNativePwd)
 
-		ses, err := xmysql.CreateSession(context.Background(), config)
+		ses, err := xmysql.GetSession(context.Background(), config)
 		xt.OK(t, err)
 
 		schemaName := "pxmysql_sico29d9kpap21"
