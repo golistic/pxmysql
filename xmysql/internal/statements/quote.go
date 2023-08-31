@@ -19,12 +19,10 @@ func QuoteValue(p any) (string, error) {
 	case float32, float64:
 		return fmt.Sprintf("%f", v), nil
 	case string:
-		// handled as default (last return)
+		return "'" + strings.ReplaceAll(v, "'", `\'`) + "'", nil
 	default:
 		return "", fmt.Errorf("cannot quote parameter with value type %T", p)
 	}
-
-	return "'" + p.(string) + "'", nil
 }
 
 func QuoteIdentifier(p string) (string, error) {

@@ -19,14 +19,15 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxconnection"
+	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxdatatypes"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxprepare"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsession"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsql"
 	"github.com/golistic/pxmysql/mysqlerrors"
 	"github.com/golistic/pxmysql/null"
 	"github.com/golistic/pxmysql/xmysql/internal/network"
-	"github.com/golistic/pxmysql/xmysql/internal/scalars"
 	"github.com/golistic/pxmysql/xmysql/internal/statements"
+	"github.com/golistic/pxmysql/xmysql/xproto"
 )
 
 // Session uses the Connection configuration to set up a session with
@@ -213,6 +214,16 @@ func (ses *Session) AuthMethod() AuthMethodType {
 	return ses.usedAuthMethod
 }
 
+func (ses *Session) ExecCommand(ctx context.Context, name string, args *mysqlxdatatypes.Any) (*Result, error) {
+	if err := ses.Write(ctx, xproto.Command(name, args)); err != nil {
+		return nil, err
+	}
+
+	return ses.handleResult(ctx, func(r *Result) bool {
+		return r.stmtOK
+	})
+}
+
 func (ses *Session) ExecuteStatement(ctx context.Context, stmt string, args ...any) (*Result, error) {
 	if len(args) > 0 {
 		var err error
@@ -234,16 +245,19 @@ func (ses *Session) ExecuteStatement(ctx context.Context, stmt string, args ...a
 	if err != nil {
 		return nil, err
 	}
-	res.session = ses
 
 	return res, nil
+}
+
+func (ses *Session) nextStmtID() uint32 {
+	return atomic.AddUint32(&ses.preparedStmtCount, 1)
 }
 
 // PrepareStatement prepares the statement and returns an instance of Prepared which
 // contains the Result instance.
 // The ID of the prepared statement can be retrieved using Result.PreparedStatementID().
 func (ses *Session) PrepareStatement(ctx context.Context, statement string) (*Prepared, error) {
-	stmtID := atomic.AddUint32(&ses.preparedStmtCount, 1)
+	stmtID := ses.nextStmtID()
 
 	if err := network.Write(ctx, ses.conn, &mysqlxprepare.Prepare{
 		StmtId: &stmtID,
@@ -397,18 +411,18 @@ func (ses *Session) DefaultSchemaName() string {
 }
 
 // Schema returns a new Schema object allowing access to contents of the active schema of this session.
-func (ses *Session) Schema(ctx context.Context) (*Schema, error) {
+func (ses *Session) Schema(_ context.Context) (*Schema, error) {
 	return newSchema(ses, ses.activeSchemaName)
 }
 
 // SchemaWithName returns a new Schema object allowing access to contents of the named schema using this session.
-func (ses *Session) SchemaWithName(ctx context.Context, name string) (*Schema, error) {
+func (ses *Session) SchemaWithName(_ context.Context, name string) (*Schema, error) {
 	return newSchema(ses, name)
 }
 
 // DefaultSchema returns a new Schema object allowing access to contents of the schema
 // specified in the configuration of this session.
-func (ses *Session) DefaultSchema(ctx context.Context, name string) (*Schema, error) {
+func (ses *Session) DefaultSchema(_ context.Context, name string) (*Schema, error) {
 	return newSchema(ses, name)
 }
 
@@ -547,7 +561,7 @@ func (ses *Session) negotiate(ctx context.Context) error {
 			Capabilities: &mysqlxconnection.Capabilities{
 				Capabilities: []*mysqlxconnection.Capability{{
 					Name:  proto.String("tls"),
-					Value: scalars.Bool(true),
+					Value: xproto.Bool(true),
 				}},
 			},
 		}, ses.maxAllowedPacket); err != nil {

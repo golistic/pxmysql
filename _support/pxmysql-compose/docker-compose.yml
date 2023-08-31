@@ -24,7 +24,7 @@ services:
 
   go:
     container_name: pxmysql.test.go
-    image: golang:1.19-bullseye
+    image: golang:1.21-bullseye
     tty: true
     stdin_open: true
     volumes:

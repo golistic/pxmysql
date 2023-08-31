@@ -5,7 +5,6 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/golistic/envs v1.0.1
 	github.com/golistic/gomake v0.9.4
 	github.com/golistic/xgo v1.0.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63

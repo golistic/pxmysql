@@ -7,6 +7,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const NamespaceMySQLx = "mysqlx"
+
 // UnmarshalPartial parses the wire-format message in b and places the result in m.
 // The provided message must be mutable (e.g., a non-nil pointer to a message).
 // This is the same function as proto.Unmarshall except that AllowPartial option set to true.

@@ -12,7 +12,7 @@ import (
 	"github.com/golistic/pxmysql/decimal"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxdatatypes"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxprepare"
-	"github.com/golistic/pxmysql/xmysql/internal/scalars"
+	"github.com/golistic/pxmysql/xmysql/xproto"
 )
 
 type Prepared struct {
@@ -43,79 +43,79 @@ func (p *Prepared) Execute(ctx context.Context, args ...any) (*Result, error) {
 		// ridiculous type-switch; preventing using reflection
 		switch v := a.(type) {
 		case nil:
-			pArgs[i] = scalars.Nil()
+			pArgs[i] = xproto.Nil()
 		case bool:
-			pArgs[i] = scalars.Bool(v)
+			pArgs[i] = xproto.Bool(v)
 		case *bool:
-			pArgs[i] = scalars.Bool(*v)
+			pArgs[i] = xproto.Bool(*v)
 		case int:
-			pArgs[i] = scalars.SignedInt(v)
+			pArgs[i] = xproto.SignedInt(v)
 		case int8:
-			pArgs[i] = scalars.SignedInt(v)
+			pArgs[i] = xproto.SignedInt(v)
 		case int16:
-			pArgs[i] = scalars.SignedInt(v)
+			pArgs[i] = xproto.SignedInt(v)
 		case int32:
-			pArgs[i] = scalars.SignedInt(v)
+			pArgs[i] = xproto.SignedInt(v)
 		case int64:
-			pArgs[i] = scalars.SignedInt(v)
+			pArgs[i] = xproto.SignedInt(v)
 		case uint:
-			pArgs[i] = scalars.UnsignedInt(v)
+			pArgs[i] = xproto.UnsignedInt(v)
 		case uint8:
-			pArgs[i] = scalars.UnsignedInt(v)
+			pArgs[i] = xproto.UnsignedInt(v)
 		case uint16:
-			pArgs[i] = scalars.UnsignedInt(v)
+			pArgs[i] = xproto.UnsignedInt(v)
 		case uint32:
-			pArgs[i] = scalars.UnsignedInt(v)
+			pArgs[i] = xproto.UnsignedInt(v)
 		case uint64:
-			pArgs[i] = scalars.UnsignedInt(v)
+			pArgs[i] = xproto.UnsignedInt(v)
 		case *int:
-			pArgs[i] = scalars.SignedInt(*v)
+			pArgs[i] = xproto.SignedInt(*v)
 		case *int8:
-			pArgs[i] = scalars.SignedInt(*v)
+			pArgs[i] = xproto.SignedInt(*v)
 		case *int16:
-			pArgs[i] = scalars.SignedInt(*v)
+			pArgs[i] = xproto.SignedInt(*v)
 		case *int32:
-			pArgs[i] = scalars.SignedInt(*v)
+			pArgs[i] = xproto.SignedInt(*v)
 		case *int64:
-			pArgs[i] = scalars.SignedInt(*v)
+			pArgs[i] = xproto.SignedInt(*v)
 		case *uint:
-			pArgs[i] = scalars.UnsignedInt(*v)
+			pArgs[i] = xproto.UnsignedInt(*v)
 		case *uint8:
-			pArgs[i] = scalars.UnsignedInt(*v)
+			pArgs[i] = xproto.UnsignedInt(*v)
 		case *uint16:
-			pArgs[i] = scalars.UnsignedInt(*v)
+			pArgs[i] = xproto.UnsignedInt(*v)
 		case *uint32:
-			pArgs[i] = scalars.UnsignedInt(*v)
+			pArgs[i] = xproto.UnsignedInt(*v)
 		case *uint64:
-			pArgs[i] = scalars.UnsignedInt(*v)
+			pArgs[i] = xproto.UnsignedInt(*v)
 		case string:
-			pArgs[i] = scalars.String(v)
+			pArgs[i] = xproto.String(v)
 		case *string:
-			pArgs[i] = scalars.String(v)
+			pArgs[i] = xproto.String(v)
 		case []byte:
-			pArgs[i] = scalars.Bytes(v)
+			pArgs[i] = xproto.Bytes(v)
 		case float32:
-			pArgs[i] = scalars.Float32(v)
+			pArgs[i] = xproto.Float32(v)
 		case *float32:
-			pArgs[i] = scalars.Float32(*v)
+			pArgs[i] = xproto.Float32(*v)
 		case float64:
-			pArgs[i] = scalars.Float64(v)
+			pArgs[i] = xproto.Float64(v)
 		case *float64:
-			pArgs[i] = scalars.Float64(*v)
+			pArgs[i] = xproto.Float64(*v)
 		case decimal.Decimal:
-			pArgs[i] = scalars.Decimal(v)
+			pArgs[i] = xproto.Decimal(v)
 		case *decimal.Decimal:
-			pArgs[i] = scalars.Decimal(*v)
+			pArgs[i] = xproto.Decimal(*v)
 		case time.Time:
-			if pArgs[i], err = scalars.Time(v, p.session.TimeLocation().String()); err != nil {
+			if pArgs[i], err = xproto.Time(v, p.session.TimeLocation().String()); err != nil {
 				return nil, err
 			}
 		case *time.Time:
-			if pArgs[i], err = scalars.Time(*v, p.session.TimeLocation().String()); err != nil {
+			if pArgs[i], err = xproto.Time(*v, p.session.TimeLocation().String()); err != nil {
 				return nil, err
 			}
 		case []string:
-			pArgs[i] = scalars.String(strings.Join(v, ","))
+			pArgs[i] = xproto.String(strings.Join(v, ","))
 		default:
 			return nil, fmt.Errorf("argument type '%T' not supported", a)
 		}
