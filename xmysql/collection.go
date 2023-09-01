@@ -14,6 +14,10 @@ type Collection struct {
 	name    string
 }
 
+var (
+	_ adder = (*Collection)(nil)
+)
+
 // newCollection instantiates a new Collection object with schema.
 func newCollection(schema *Schema, name string) (*Collection, error) {
 	if schema == nil || schema.session == nil {
@@ -49,6 +53,16 @@ func (c *Collection) CheckExistence(ctx context.Context) error {
 	if _, ok := slices.BinarySearch(names, c.name); !ok {
 		return ErrNotAvailable
 	}
+
+	return nil
+}
+
+func (c *Collection) Add(object ...any) *Add {
+
+	return NewAdd(c).Add(object...)
+}
+
+func (c *Collection) Remove(ctx context.Context) *Add {
 
 	return nil
 }

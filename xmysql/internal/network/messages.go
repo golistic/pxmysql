@@ -15,6 +15,7 @@ import (
 	"github.com/golistic/pxmysql/interfaces"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlx"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxconnection"
+	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxcrud"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxprepare"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsession"
 	"github.com/golistic/pxmysql/internal/mysqlx/mysqlxsql"
@@ -106,6 +107,9 @@ func clientMessageType(msg proto.Message) (mysqlx.ClientMessages_Type, error) {
 		return mysqlx.ClientMessages_SESS_RESET, nil
 	case *mysqlxsession.Close:
 		return mysqlx.ClientMessages_SESS_CLOSE, nil
+
+	case *mysqlxcrud.Insert:
+		return mysqlx.ClientMessages_CRUD_INSERT, nil
 
 	case *mysqlxsql.StmtExecute:
 		return mysqlx.ClientMessages_SQL_STMT_EXECUTE, nil
