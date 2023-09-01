@@ -47,6 +47,11 @@ func (s *Schema) Name() string {
 	return s.name
 }
 
+// GetSession returns the underlying session of s.
+func (s *Schema) GetSession() *Session {
+	return s.session
+}
+
 // GetCollection retrieve the collection using its name.
 // To keep compatible with behavior seen it MySQL connectors, when the collection
 // does not exist, by default, no error is returned. To return ErrNotAvailable instead,

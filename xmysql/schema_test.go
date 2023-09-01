@@ -16,7 +16,38 @@ import (
 	"github.com/golistic/pxmysql/xmysql/collection"
 )
 
-func TestSchema_Collections(t *testing.T) {
+func TestSchema_GetSession(t *testing.T) {
+
+	t.Run("session of schema returned", func(t *testing.T) {
+
+		config := &xmysql.ConnectConfig{
+			Address:  testContext.XPluginAddr,
+			Username: xxt.UserNative,
+		}
+		config.SetPassword(xxt.UserNativePwd)
+
+		ctx := context.Background()
+
+		exp, err := xmysql.GetSession(ctx, config)
+		xt.OK(t, err)
+
+		for i := 0; i < 10; i++ {
+			schema, err := exp.GetSchema(ctx)
+			xt.OK(t, err)
+
+			got := schema.GetSession()
+			xt.Assert(t, got != nil, "expected not nil")
+			xt.Eq(t, exp, got)
+		}
+	})
+
+	t.Run("no session returns nil", func(t *testing.T) {
+
+		xt.Eq(t, nil, (&xmysql.Schema{}).GetSession())
+	})
+}
+
+func TestSchema_GetCollections(t *testing.T) {
 
 	config := &xmysql.ConnectConfig{
 		Address:  testContext.XPluginAddr,
