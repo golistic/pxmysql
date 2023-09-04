@@ -47,7 +47,7 @@ func TestCollection_Add(t *testing.T) {
 	t.Run("can only add struct", func(t *testing.T) {
 		err := coll.Add(1).GetError()
 		xt.KO(t, err)
-		xt.Eq(t, "object must be struct", err.Error())
+		xt.Eq(t, "unsupported object kind int", err.Error())
 	})
 
 	t.Run("object as pointer value", func(t *testing.T) {

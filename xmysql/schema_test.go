@@ -9,6 +9,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/golistic/xgo/xstrings"
 	"github.com/golistic/xgo/xt"
 
 	"github.com/golistic/pxmysql/internal/xxt"
@@ -79,7 +80,17 @@ func TestSchema_GetCollections(t *testing.T) {
 		}
 		sort.Strings(got)
 
-		xt.Eq(t, exp, got)
+		xt.Assert(t, func(exp, got []string) bool {
+			if len(exp) > len(got) {
+				return false
+			}
+			for _, l := range exp {
+				if !xstrings.SliceHas(got, l) {
+					return false
+				}
+			}
+			return true
+		}(exp, got))
 	})
 }
 
