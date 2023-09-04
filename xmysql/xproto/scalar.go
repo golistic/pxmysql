@@ -111,7 +111,7 @@ func UnsignedInt[T constraints.Unsigned](value T) *mysqlxdatatypes.Any {
 
 func UnsignedIntScalar[T constraints.Unsigned](value T) *mysqlxdatatypes.Scalar {
 	return &mysqlxdatatypes.Scalar{
-		Type:         mysqlxdatatypes.Scalar_V_SINT.Enum(),
+		Type:         mysqlxdatatypes.Scalar_V_UINT.Enum(),
 		VUnsignedInt: proto.Uint64(uint64(value)),
 	}
 }
