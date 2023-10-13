@@ -518,11 +518,11 @@ func TestSession_ExecuteStatement(t *testing.T) {
 				xt.Eq(t, exp[id].numIntUnsigned, row.Values[10].(uint64))
 				xt.Eq(t, exp[id].numBigIntSigned, row.Values[11].(int64))
 				xt.Eq(t, exp[id].numBigIntUnsigned, row.Values[12].(uint64))
-				xt.Assert(t, exp[id].numDecimal.Equal(row.Values[13].(*decimal.Decimal)),
-					fmt.Sprintf("%s <> %s", exp[id].numDecimal, row.Values[13].(*decimal.Decimal)))
-				xt.Assert(t, exp[id].numDecimal2.Equal(row.Values[14].(*decimal.Decimal)))
-				xt.Assert(t, exp[id].numDecimal3.Equal(row.Values[15].(*decimal.Decimal)),
-					fmt.Sprintf("expected %s == %s", exp[id].numDecimal3, row.Values[15].(*decimal.Decimal)))
+				xt.Assert(t, exp[id].numDecimal.Equal(row.Values[13].(decimal.Decimal)),
+					fmt.Sprintf("%s <> %v", exp[id].numDecimal, row.Values[13].(decimal.Decimal)))
+				xt.Assert(t, exp[id].numDecimal2.Equal(row.Values[14].(decimal.Decimal)))
+				xt.Assert(t, exp[id].numDecimal3.Equal(row.Values[15].(decimal.Decimal)),
+					fmt.Sprintf("expected %s == %v", exp[id].numDecimal3, row.Values[15].(decimal.Decimal)))
 			})
 		}
 	})

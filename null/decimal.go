@@ -35,9 +35,9 @@ func (nd Decimal) Compare(value any) bool {
 
 	switch v := value.(type) {
 	case decimal.Decimal:
-		return nd.Decimal.Equal(&v)
-	case *decimal.Decimal:
 		return nd.Decimal.Equal(v)
+	case *decimal.Decimal:
+		return nd.Decimal.Equal(*v)
 	default:
 		panic(fmt.Sprintf("value is of unsupported type %T", value))
 	}

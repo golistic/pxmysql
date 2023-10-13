@@ -5,6 +5,7 @@ package xmysql_test
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"testing"
 
@@ -32,6 +33,12 @@ func testTearDown() {
 func TestMain(m *testing.M) {
 	defer func() { os.Exit(testExitCode) }()
 	defer testTearDown()
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(string(debug.Stack()))
+			os.Exit(1)
+		}
+	}()
 
 	var err error
 	if testContext, testErr = xxt.New(testSchema); err != nil {

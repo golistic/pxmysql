@@ -472,9 +472,23 @@ func (rs *Result) decodeValue(ctx context.Context, value []byte, column *mysqlxr
 		}
 
 	case mysqlxresultset.ColumnMetaData_DECIMAL:
-		var err error
-		if goValue, err = decimal.NewDecimalFromBCD(value); err != nil {
-			return nil, err
+		var v decimal.Decimal
+
+		if valid {
+			var err error
+			v, err = decimal.NewDecimalFromBCD(value)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if column.GetFlags()&flagNotNull > 0 {
+			goValue = v
+		} else {
+			goValue = null.Decimal{
+				Decimal: v,
+				Valid:   valid,
+			}
 		}
 
 	default:

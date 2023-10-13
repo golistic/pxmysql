@@ -3,6 +3,7 @@
 package decimal
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
@@ -91,8 +92,8 @@ func (d *Decimal) String() string {
 }
 
 // Equal returns whether d is equal to the other.
-func (d *Decimal) Equal(other *Decimal) bool {
-	if d == nil || other == nil {
+func (d *Decimal) Equal(other Decimal) bool {
+	if d == nil {
 		return false
 	}
 
@@ -162,16 +163,17 @@ func (d *Decimal) Encode() ([]byte, error) {
 
 // NewDecimalFromBCD decodes bcd or Binary-Coded Decimal and returns
 // a new instance of Decimal.
-func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
+func NewDecimalFromBCD(bcd []byte) (Decimal, error) {
 	const digits = "0123456789"
 
 	var errDecode = "cannot decode binary-coded decimal (%w)"
 
 	if len(bcd) < 2 {
-		return nil, fmt.Errorf(errDecode, fmt.Errorf("not enough data"))
+		fmt.Println("###", len(bcd), hex.EncodeToString(bcd))
+		return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("not enough data"))
 	}
 
-	d := &Decimal{
+	d := Decimal{
 		integral: &big.Int{},
 		fraction: &big.Int{},
 		maxScale: int(bcd[0]),
@@ -186,7 +188,7 @@ func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
 		if hi < 0x0a {
 			s += string(digits[hi]) + string(digits[lo])
 		} else {
-			return nil, fmt.Errorf(errDecode, fmt.Errorf("found bits > 9"))
+			return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("found bits > 9"))
 		}
 	}
 
@@ -194,9 +196,9 @@ func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
 		hi := (last >> 4) & 0x0f
 		last <<= 4
 		if hi > 9 {
-			return nil, fmt.Errorf(errDecode, fmt.Errorf("last byte value was > 9"))
+			return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("last byte value was > 9"))
 		} else if last != 0xc0 && last != 0xd0 {
-			return nil, fmt.Errorf(errDecode, fmt.Errorf("bad signing bit"))
+			return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("bad signing bit"))
 		}
 		s += string(digits[hi])
 	}
@@ -206,7 +208,7 @@ func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
 		cut := len(s) - d.maxScale
 
 		if cut < 0 {
-			return nil, fmt.Errorf(errDecode, fmt.Errorf("not enough data with fraction"))
+			return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("not enough data with fraction"))
 		}
 
 		// ignoring ok; cannot find way to fail
@@ -215,7 +217,7 @@ func NewDecimalFromBCD(bcd []byte) (*Decimal, error) {
 	} else {
 		d.integral, ok = (&big.Int{}).SetString(s, 10)
 		if !ok {
-			return nil, fmt.Errorf(errDecode, fmt.Errorf("bad integral part"))
+			return Decimal{}, fmt.Errorf(errDecode, fmt.Errorf("bad integral part"))
 		}
 	}
 
