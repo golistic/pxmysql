@@ -147,7 +147,7 @@ func TestPrepared_Execute(t *testing.T) {
 		xt.Eq(t, vInt64, int(row[10].(int64)))
 		xt.Eq(t, vUint64, uint(row[11].(uint64)))
 		// DECIMAL
-		xt.Assert(t, vDecimal.Equal(row[12].(*decimal.Decimal)))
+		xt.Assert(t, vDecimal.Equal(row[12].(decimal.Decimal)))
 		// FLOAT
 		xt.Eq(t, vFloat32Neg, row[13].(float32))
 		xt.Eq(t, vFloat32Pos, row[14].(float32))
@@ -221,7 +221,7 @@ func TestPrepared_Execute(t *testing.T) {
 			xt.Assert(t, null.Compare(row[10].(null.Int64), vInt64))
 			xt.Assert(t, null.Compare(row[11].(null.Uint64), vUint64))
 			// DECIMAL
-			xt.Assert(t, vDecimal.Equal(row[12].(*decimal.Decimal)))
+			xt.Assert(t, null.Compare(row[12].(null.Decimal), vDecimal))
 			// FLOAT
 			xt.Assert(t, null.Compare(row[13].(null.Float32), vFloat32Neg))
 			xt.Assert(t, null.Compare(row[14].(null.Float32), vFloat32Pos))

@@ -204,7 +204,7 @@ func TestNewDecimalFromBCD(t *testing.T) {
 }
 
 func TestZero(t *testing.T) {
-	xt.Assert(t, Zero.Equal(MustNew("0")))
+	xt.Assert(t, Zero.Equal(*MustNew("0")))
 }
 
 func TestDecimal_Fraction(t *testing.T) {
@@ -250,7 +250,7 @@ func TestDecimal_Integral(t *testing.T) {
 func TestDecimal_Equal(t *testing.T) {
 	t.Run("both nil", func(t *testing.T) {
 		var left *Decimal
-		var right *Decimal
+		var right Decimal
 
 		xt.Assert(t, !left.Equal(right))
 	})
@@ -259,28 +259,28 @@ func TestDecimal_Equal(t *testing.T) {
 		left := MustNew("1234.9876")
 		right := MustNew("5566.9876")
 
-		xt.Assert(t, !left.Equal(right))
+		xt.Assert(t, !left.Equal(*right))
 	})
 
 	t.Run("fractional part not equal", func(t *testing.T) {
 		left := MustNew("1234.9876")
 		right := MustNew("1234.5566")
 
-		xt.Assert(t, !left.Equal(right))
+		xt.Assert(t, !left.Equal(*right))
 	})
 
 	t.Run("not equal", func(t *testing.T) {
 		left := MustNew("5566.6655")
 		right := MustNew("1234.1234")
 
-		xt.Assert(t, !left.Equal(right))
+		xt.Assert(t, !left.Equal(*right))
 	})
 
 	t.Run("equal", func(t *testing.T) {
 		left := MustNew("1234.9876")
 		right := MustNew("1234.9876")
 
-		xt.Assert(t, left.Equal(right))
+		xt.Assert(t, left.Equal(*right))
 	})
 }
 
